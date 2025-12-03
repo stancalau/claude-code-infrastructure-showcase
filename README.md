@@ -1,8 +1,8 @@
 # Claude Code Infrastructure Showcase
 
-**A curated reference library of production-tested Claude Code infrastructure for Spring Boot 3.x development.**
+**A curated reference library of production-tested Claude Code infrastructure for Spring Boot 3.x development with Thymeleaf UI.**
 
-Born from 6 months of real-world use managing complex enterprise Java projects, this showcase provides the patterns and systems that solved the "skills don't activate automatically" problem and scaled Claude Code for Spring Boot development.
+Born from 6 months of real-world use managing complex enterprise Java projects, this showcase provides the patterns and systems that solved the "skills don't activate automatically" problem and scaled Claude Code for full-stack Spring Boot development with server-side rendered Thymeleaf templates.
 
 > **This is NOT a working application** - it's a reference library. Copy what you need into your own projects.
 
@@ -16,6 +16,7 @@ Born from 6 months of real-world use managing complex enterprise Java projects, 
 - Specialized agents for complex tasks
 - Dev docs system that survives context resets
 - Comprehensive examples using Spring Boot 3.x patterns
+- Full Thymeleaf UI development with layouts, fragments, forms, and HTMX
 
 **Time investment to build:** 6 months of iteration
 **Time to integrate into your project:** 15-30 minutes
@@ -45,6 +46,7 @@ Browse the [skills catalog](.claude/skills/) and copy what you need.
 
 **Available:**
 - **backend-dev-guidelines** - Spring Boot 3.x/Lombok/JPA patterns
+- **thymeleaf-dev-guidelines** - Thymeleaf UI/layouts/forms/HTMX patterns
 - **skill-developer** - Meta-skill for creating skills
 - **route-tester** - Test REST endpoints with MockMvc/TestContainers
 - **error-tracking** - Logging and exception handling patterns
@@ -110,8 +112,9 @@ skill-name/
 
 ```
 .claude/
-├── skills/                 # 4 production skills
+├── skills/                 # 5 production skills
 │   ├── backend-dev-guidelines/  (11 resource files)
+│   ├── thymeleaf-dev-guidelines/ (8 resource files)
 │   ├── skill-developer/         (7 resource files)
 │   ├── route-tester/
 │   ├── error-tracking/
@@ -137,12 +140,13 @@ dev/
 
 ## Component Catalog
 
-### Skills (4)
+### Skills (5)
 
 | Skill | Lines | Purpose | Best For |
 |-------|-------|---------|----------|
 | [**skill-developer**](.claude/skills/skill-developer/) | ~400 | Creating and managing skills | Meta-development |
 | [**backend-dev-guidelines**](.claude/skills/backend-dev-guidelines/) | ~500 | Spring Boot/JPA/Lombok patterns | Backend APIs |
+| [**thymeleaf-dev-guidelines**](.claude/skills/thymeleaf-dev-guidelines/) | ~400 | Thymeleaf layouts/fragments/forms/HTMX | Server-side UI |
 | [**route-tester**](.claude/skills/route-tester/) | ~300 | Testing REST endpoints | API testing |
 | [**error-tracking**](.claude/skills/error-tracking/) | ~250 | Logging and exception handling | Error monitoring |
 

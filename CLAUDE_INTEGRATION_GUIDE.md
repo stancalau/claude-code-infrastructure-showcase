@@ -43,6 +43,16 @@ The backend-dev-guidelines skill is designed for Spring Boot 3.x with Lombok. I 
 Which would you prefer?
 ```
 
+### Frontend/UI Skills
+
+**thymeleaf-dev-guidelines requires:**
+- Spring Boot 3.x with Thymeleaf
+- Thymeleaf extras for Spring Security (optional)
+- Bootstrap 5 or similar CSS framework (recommended)
+
+**Before integrating, ask:**
+"Do you use Thymeleaf for your UI? Where are your templates located?"
+
 ### Skills That Are Tech-Agnostic
 
 These work for ANY tech stack:
@@ -166,6 +176,13 @@ Get-Content .claude/skills/skill-rules.json | ConvertFrom-Json
 - **If different stack:** Offer to adapt using this as template
 - **Customize:** pathPatterns
 - **Example paths:** `src/main/java/`, `api/src/main/java/`, `**/src/main/java/`
+
+#### thymeleaf-dev-guidelines
+- **Tech Requirements:** Spring Boot 3.x with Thymeleaf
+- **Ask:** "Do you use Thymeleaf for server-side rendering?" "Where are your templates located?"
+- **Customize:** pathPatterns for templates and static resources
+- **Example paths:** `**/templates/**/*.html`, `**/static/**`, `**/messages*.properties`
+- **Works with:** Bootstrap 5, WebJars, HTMX, Spring Security extras
 
 #### route-tester
 - **Tech Requirements:** Spring Boot with Spring Test
@@ -559,6 +576,7 @@ Which would you prefer?
 |-----------|------------------|--------------|-------------|
 | **skill-developer** | None | None | Copy as-is |
 | **backend-dev-guidelines** | Spring Boot 3.x/Lombok | Paths + tech check | "Use Spring Boot?" "Where's Java source?" |
+| **thymeleaf-dev-guidelines** | Spring Boot 3.x/Thymeleaf | Template paths | "Use Thymeleaf?" "Where are templates?" |
 | **route-tester** | Spring Test | Test paths | "Use MockMvc/TestContainers?" |
 | **error-tracking** | Spring Boot | Paths | "Where's Java source?" |
 | **skill-activation-prompt** | Node.js | None | Copy as-is, run `npm install` |

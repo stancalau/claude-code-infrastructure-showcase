@@ -76,6 +76,46 @@ Skills are modular knowledge bases that Claude loads when needed. They provide:
 
 ---
 
+### thymeleaf-dev-guidelines
+**Purpose:** Thymeleaf UI development for Spring Boot 3.x
+
+**Files:** 8 resource files
+
+**Covers:**
+- Template organization and layouts
+- Fragment definition and reuse
+- Form binding and validation display
+- Spring Security integration (sec:authorize)
+- Internationalization (i18n) with message bundles
+- HTMX integration for dynamic updates
+- Error page handling
+- Complete CRUD examples
+
+**Use when:**
+- Creating/modifying HTML templates
+- Building layouts and fragments
+- Implementing forms with validation
+- Adding internationalization
+- Integrating HTMX for partial updates
+
+**Customization:** Update `pathPatterns` in skill-rules.json to match your template directories
+
+**Example pathPatterns:**
+```json
+{
+  "pathPatterns": [
+    "**/templates/**/*.html",
+    "**/static/css/**",
+    "**/static/js/**",
+    "**/messages*.properties"
+  ]
+}
+```
+
+**[View Skill](thymeleaf-dev-guidelines/)**
+
+---
+
 ### route-tester
 **Purpose:** Testing REST endpoints with MockMvc and TestContainers
 
