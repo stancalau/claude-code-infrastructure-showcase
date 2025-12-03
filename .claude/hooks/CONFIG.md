@@ -1,228 +1,32 @@
 # Hooks Configuration Guide
 
-This guide explains how to configure and customize the hooks system for your project.
+Cross-platform hook configuration using Node.js/TypeScript.
 
-## Quick Start Configuration
+---
 
-### 1. Register Hooks in .claude/settings.json
+## Prerequisites
 
-Create or update `.claude/settings.json` in your project root:
+Node.js must be installed. The hooks use `npx tsx` which works identically on Windows, Linux, and Mac.
 
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-activation-prompt.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|MultiEdit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop-prettier-formatter.sh"
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check-enhanced.sh"
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/error-handling-reminder.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
+```bash
+node --version
+npm --version
 ```
 
-### 2. Install Dependencies
+---
+
+## Quick Start
+
+### 1. Install Dependencies
 
 ```bash
 cd .claude/hooks
 npm install
 ```
 
-### 3. Set Execute Permissions
+### 2. Configure Hooks
 
-```bash
-chmod +x .claude/hooks/*.sh
-```
-
-## Customization Options
-
-### Project Structure Detection
-
-By default, hooks detect these directory patterns:
-
-**Frontend:** `frontend/`, `client/`, `web/`, `app/`, `ui/`
-**Backend:** `backend/`, `server/`, `api/`, `src/`, `services/`
-**Database:** `database/`, `prisma/`, `migrations/`
-**Monorepo:** `packages/*`, `examples/*`
-
-#### Adding Custom Directory Patterns
-
-Edit `.claude/hooks/post-tool-use-tracker.sh`, function `detect_repo()`:
-
-```bash
-case "$repo" in
-    # Add your custom directories here
-    my-custom-service)
-        echo "$repo"
-        ;;
-    admin-panel)
-        echo "$repo"
-        ;;
-    # ... existing patterns
-esac
-```
-
-### Build Command Detection
-
-The hooks auto-detect build commands based on:
-1. Presence of `package.json` with "build" script
-2. Package manager (pnpm > npm > yarn)
-3. Special cases (Prisma schemas)
-
-#### Customizing Build Commands
-
-Edit `.claude/hooks/post-tool-use-tracker.sh`, function `get_build_command()`:
-
-```bash
-# Add custom build logic
-if [[ "$repo" == "my-service" ]]; then
-    echo "cd $repo_path && make build"
-    return
-fi
-```
-
-### TypeScript Configuration
-
-Hooks automatically detect:
-- `tsconfig.json` for standard TypeScript projects
-- `tsconfig.app.json` for Vite/React projects
-
-#### Custom TypeScript Configs
-
-Edit `.claude/hooks/post-tool-use-tracker.sh`, function `get_tsc_command()`:
-
-```bash
-if [[ "$repo" == "my-service" ]]; then
-    echo "cd $repo_path && npx tsc --project tsconfig.build.json --noEmit"
-    return
-fi
-```
-
-### Prettier Configuration
-
-The prettier hook searches for configs in this order:
-1. Current file directory (walking upward)
-2. Project root
-3. Falls back to Prettier defaults
-
-#### Custom Prettier Config Search
-
-Edit `.claude/hooks/stop-prettier-formatter.sh`, function `get_prettier_config()`:
-
-```bash
-# Add custom config locations
-if [[ -f "$project_root/config/.prettierrc" ]]; then
-    echo "$project_root/config/.prettierrc"
-    return
-fi
-```
-
-### Error Handling Reminders
-
-Configure file category detection in `.claude/hooks/error-handling-reminder.ts`:
-
-```typescript
-function getFileCategory(filePath: string): 'backend' | 'frontend' | 'database' | 'other' {
-    // Add custom patterns
-    if (filePath.includes('/my-custom-dir/')) return 'backend';
-    // ... existing patterns
-}
-```
-
-### Error Threshold Configuration
-
-Change when to recommend the auto-error-resolver agent.
-
-Edit `.claude/hooks/stop-build-check-enhanced.sh`:
-
-```bash
-# Default is 5 errors - change to your preference
-if [[ $total_errors -ge 10 ]]; then  # Now requires 10+ errors
-    # Recommend agent
-fi
-```
-
-## Environment Variables
-
-### Global Environment Variables
-
-Set in your shell profile (`.bashrc`, `.zshrc`, etc.):
-
-```bash
-# Disable error handling reminders
-export SKIP_ERROR_REMINDER=1
-
-# Custom project directory (if not using default)
-export CLAUDE_PROJECT_DIR=/path/to/your/project
-```
-
-### Per-Session Environment Variables
-
-Set before starting Claude Code:
-
-```bash
-SKIP_ERROR_REMINDER=1 claude-code
-```
-
-## Hook Execution Order
-
-Stop hooks run in the order specified in `settings.json`:
-
-```json
-"Stop": [
-  {
-    "hooks": [
-      { "command": "...formatter.sh" },    // Runs FIRST
-      { "command": "...build-check.sh" },  // Runs SECOND
-      { "command": "...reminder.sh" }      // Runs THIRD
-    ]
-  }
-]
-```
-
-**Why this order matters:**
-1. Format files first (clean code)
-2. Then check for errors
-3. Finally show reminders
-
-## Selective Hook Enabling
-
-You don't need all hooks. Choose what works for your project:
-
-### Minimal Setup (Skill Activation Only)
+Add to `.claude/settings.json`:
 
 ```json
 {
@@ -232,27 +36,7 @@ You don't need all hooks. Choose what works for your project:
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-activation-prompt.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-### Build Checking Only (No Formatting)
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|MultiEdit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.sh"
+            "command": "npx tsx .claude/hooks/skill-activation-prompt.ts"
           }
         ]
       }
@@ -262,7 +46,7 @@ You don't need all hooks. Choose what works for your project:
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check-enhanced.sh"
+            "command": "npx tsx .claude/hooks/error-handling-reminder.ts"
           }
         ]
       }
@@ -271,18 +55,26 @@ You don't need all hooks. Choose what works for your project:
 }
 ```
 
-### Formatting Only (No Build Checking)
+**Note:** This configuration works on Windows, Linux, and Mac without modification.
+
+---
+
+## Complete Configuration Example
 
 ```json
 {
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": ["Edit:*", "Write:*", "Bash:*"],
+    "defaultMode": "acceptEdits"
+  },
   "hooks": {
-    "PostToolUse": [
+    "UserPromptSubmit": [
       {
-        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.sh"
+            "command": "npx tsx .claude/hooks/skill-activation-prompt.ts"
           }
         ]
       }
@@ -292,7 +84,7 @@ You don't need all hooks. Choose what works for your project:
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop-prettier-formatter.sh"
+            "command": "npx tsx .claude/hooks/error-handling-reminder.ts"
           }
         ]
       }
@@ -301,148 +93,149 @@ You don't need all hooks. Choose what works for your project:
 }
 ```
 
-## Cache Management
+---
 
-### Cache Location
+## Customization
 
-```
-$CLAUDE_PROJECT_DIR/.claude/tsc-cache/[session_id]/
-```
+### Skill Activation Rules
 
-### Manual Cache Cleanup
-
-```bash
-# Remove all cached data
-rm -rf $CLAUDE_PROJECT_DIR/.claude/tsc-cache/*
-
-# Remove specific session
-rm -rf $CLAUDE_PROJECT_DIR/.claude/tsc-cache/[session-id]
-```
-
-### Automatic Cleanup
-
-The build-check hook automatically cleans up session cache on successful builds.
-
-## Troubleshooting Configuration
-
-### Hook Not Executing
-
-1. **Check registration:** Verify hook is in `.claude/settings.json`
-2. **Check permissions:** Run `chmod +x .claude/hooks/*.sh`
-3. **Check path:** Ensure `$CLAUDE_PROJECT_DIR` is set correctly
-4. **Check TypeScript:** Run `cd .claude/hooks && npx tsc` to check for errors
-
-### False Positive Detections
-
-**Issue:** Hook triggers for files it shouldn't
-
-**Solution:** Add skip conditions in the relevant hook:
-
-```bash
-# In post-tool-use-tracker.sh
-if [[ "$file_path" =~ /generated/ ]]; then
-    exit 0  # Skip generated files
-fi
-```
-
-### Performance Issues
-
-**Issue:** Hooks are slow
-
-**Solutions:**
-1. Limit TypeScript checks to changed files only
-2. Use faster package managers (pnpm > npm)
-3. Add more skip conditions
-4. Disable Prettier for large files
-
-```bash
-# Skip large files in stop-prettier-formatter.sh
-file_size=$(wc -c < "$file" 2>/dev/null || echo 0)
-if [[ $file_size -gt 100000 ]]; then  # Skip files > 100KB
-    continue
-fi
-```
-
-### Debugging Hooks
-
-Add debug output to any hook:
-
-```bash
-# At the top of the hook script
-set -x  # Enable debug mode
-
-# Or add specific debug lines
-echo "DEBUG: file_path=$file_path" >&2
-echo "DEBUG: repo=$repo" >&2
-```
-
-View hook execution in Claude Code's logs.
-
-## Advanced Configuration
-
-### Custom Hook Event Handlers
-
-You can create your own hooks for other events:
+Edit `.claude/skills/skill-rules.json` to customize skill triggers:
 
 ```json
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/my-custom-bash-guard.sh"
-          }
-        ]
+  "skills": {
+    "my-custom-skill": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "promptTriggers": {
+        "keywords": ["my-keyword", "another-keyword"],
+        "intentPatterns": ["(create|add).*my-feature"]
       }
-    ]
+    }
   }
 }
 ```
 
-### Monorepo Configuration
+### Error Handling Reminder
 
-For monorepos with multiple packages:
+Edit `error-handling-reminder.ts` to customize file category detection:
 
-```bash
-# In post-tool-use-tracker.sh, detect_repo()
-case "$repo" in
-    packages)
-        # Get the package name
-        local package=$(echo "$relative_path" | cut -d'/' -f2)
-        if [[ -n "$package" ]]; then
-            echo "packages/$package"
-        else
-            echo "$repo"
-        fi
-        ;;
-esac
+```typescript
+function getFileCategory(filePath: string): 'controller' | 'service' | 'repository' | 'config' | 'test' | 'other' {
+    const normalizedPath = filePath.replace(/\\/g, '/');
+
+    // Add custom patterns
+    if (normalizedPath.includes('/my-custom-dir/')) return 'service';
+
+    // Existing patterns
+    if (normalizedPath.includes('/controller/')) return 'controller';
+    // ...
+}
 ```
 
-### Docker/Container Projects
+---
 
-If your build commands need to run in containers:
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CLAUDE_PROJECT_DIR` | Project root directory | Current working directory |
+| `SKIP_ERROR_REMINDER` | Set to `1` to disable error reminders | Not set |
+
+**Windows:**
+```powershell
+$env:SKIP_ERROR_REMINDER = "1"
+```
+
+**Linux/Mac:**
+```bash
+export SKIP_ERROR_REMINDER=1
+```
+
+---
+
+## Hook Event Types
+
+### UserPromptSubmit
+Runs when user submits a prompt.
+
+**Use for:** Skill auto-activation, prompt enhancement
+
+### PreToolUse
+Runs before a tool executes.
+
+**Use for:** Blocking dangerous operations, validation
+
+### PostToolUse
+Runs after a tool completes.
+
+**Use for:** File tracking, audit logging
+
+### Stop
+Runs when Claude stops working.
+
+**Use for:** Build validation, reminders
+
+---
+
+## Troubleshooting
+
+### "npx: command not found"
+
+Node.js is not installed. Install it:
+
+**Windows:**
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+
+**Linux:**
+```bash
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+**Mac:**
+```bash
+brew install node
+```
+
+### "Cannot find module 'tsx'"
 
 ```bash
-# In post-tool-use-tracker.sh, get_build_command()
-if [[ "$repo" == "api" ]]; then
-    echo "docker-compose exec api npm run build"
-    return
-fi
+cd .claude/hooks
+npm install
 ```
+
+### Hook not running
+
+1. Check settings.json has correct configuration
+2. Verify `node --version` works
+3. Run `npm list` in .claude/hooks to verify dependencies
+
+### Debugging
+
+Add console.log statements to TypeScript files:
+
+```typescript
+console.error('DEBUG: prompt =', prompt);
+```
+
+Output goes to stderr and will be visible in Claude Code.
+
+---
 
 ## Best Practices
 
-1. **Start minimal** - Enable hooks one at a time
-2. **Test thoroughly** - Make changes and verify hooks work
-3. **Document customizations** - Add comments to explain custom logic
-4. **Version control** - Commit `.claude/` directory to git
-5. **Team consistency** - Share configuration across team
+1. **Start minimal** - Enable skill-activation-prompt first
+2. **Test thoroughly** - Verify hooks work before adding more
+3. **Version control** - Commit `.claude/` directory to git
+4. **Team consistency** - Share configuration across team
+
+---
 
 ## See Also
 
 - [README.md](./README.md) - Hooks overview
-- [../../docs/HOOKS_SYSTEM.md](../../docs/HOOKS_SYSTEM.md) - Complete hooks reference
-- [../../docs/SKILLS_SYSTEM.md](../../docs/SKILLS_SYSTEM.md) - Skills integration
+- [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md) - Full integration guide

@@ -1,388 +1,296 @@
 ---
 name: route-tester
-description: Test authenticated routes in the your project using cookie-based authentication. Use this skill when testing API endpoints, validating route functionality, or debugging authentication issues. Includes patterns for using test-auth-route.js and mock authentication.
+description: Test REST endpoints in Spring Boot applications using MockMvc, TestRestTemplate, and TestContainers. Use this skill when testing API endpoints, validating controller functionality, or writing integration tests.
 ---
 
-# your project Route Tester Skill
+# Spring Boot Endpoint Testing
 
 ## Purpose
-This skill provides patterns for testing authenticated routes in the your project using cookie-based JWT authentication.
+
+This skill provides patterns for testing REST endpoints in Spring Boot applications using MockMvc for unit tests and TestContainers for integration tests.
 
 ## When to Use This Skill
+
 - Testing new API endpoints
-- Validating route functionality after changes
-- Debugging authentication issues
-- Testing POST/PUT/DELETE operations
+- Validating controller functionality after changes
+- Writing integration tests with real database
+- Testing authentication and authorization
 - Verifying request/response data
-
-## your project Authentication Overview
-
-The your project uses:
-- **Keycloak** for SSO (realm: yourRealm)
-- **Cookie-based JWT** tokens (not Bearer headers)
-- **Cookie name**: `refresh_token`
-- **JWT signing**: Using secret from `config.ini`
 
 ## Testing Methods
 
-### Method 1: test-auth-route.js (RECOMMENDED)
+### Method 1: MockMvc (Unit Tests) - RECOMMENDED FOR CONTROLLERS
 
-The `test-auth-route.js` script handles all authentication complexity automatically.
+```java
+@WebMvcTest(UserController.class)
+@Import(SecurityConfig.class)
+class UserControllerTest {
 
-**Location**: `/root/git/your project_pre/scripts/test-auth-route.js`
+    @Autowired
+    private MockMvc mockMvc;
 
-#### Basic GET Request
+    @MockBean
+    private UserService userService;
 
-```bash
-node scripts/test-auth-route.js http://localhost:3000/blog-api/api/endpoint
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    @WithMockUser
+    void create_ShouldReturn201_WhenValidRequest() throws Exception {
+        CreateUserRequest request = new CreateUserRequest(
+            "test@example.com", "Test User", "password123");
+        UserResponse response = new UserResponse(1L, "test@example.com", "Test User");
+
+        when(userService.create(any())).thenReturn(response);
+
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.email").value("test@example.com"));
+    }
+
+    @Test
+    @WithMockUser
+    void findById_ShouldReturn404_WhenNotFound() throws Exception {
+        when(userService.findById(999L))
+            .thenThrow(new ResourceNotFoundException("User", 999L));
+
+        mockMvc.perform(get("/api/users/999"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+    }
+}
 ```
 
-#### POST Request with JSON Data
+### Method 2: TestContainers (Integration Tests)
 
-```bash
-node scripts/test-auth-route.js \
-    http://localhost:3000/blog-api/777/submit \
-    POST \
-    '{"responses":{"4577":"13295"},"submissionID":5,"stepInstanceId":"11"}'
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Testcontainers
+@ActiveProfiles("test")
+class UserControllerIntegrationTest {
+
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine");
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+    }
+
+    @Autowired
+    private TestRestTemplate restTemplate;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @BeforeEach
+    void setUp() {
+        userRepository.deleteAll();
+    }
+
+    @Test
+    void fullCrudFlow() {
+        CreateUserRequest createRequest = new CreateUserRequest(
+            "test@example.com", "Test User", "password123");
+
+        ResponseEntity<UserResponse> createResponse = restTemplate.postForEntity(
+            "/api/users", createRequest, UserResponse.class);
+
+        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(createResponse.getBody().email()).isEqualTo("test@example.com");
+
+        Long userId = createResponse.getBody().id();
+
+        ResponseEntity<UserResponse> getResponse = restTemplate.getForEntity(
+            "/api/users/" + userId, UserResponse.class);
+
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(getResponse.getBody().email()).isEqualTo("test@example.com");
+    }
+}
 ```
 
-#### What the Script Does
+### Method 3: MockMvc with Full Context
 
-1. Gets a refresh token from Keycloak
-   - Username: `testuser`
-   - Password: `testpassword`
-2. Signs the token with JWT secret from `config.ini`
-3. Creates cookie header: `refresh_token=<signed-token>`
-4. Makes the authenticated request
-5. Shows the exact curl command to reproduce manually
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+@Testcontainers
+class UserControllerFullTest {
 
-#### Script Output
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine");
 
-The script outputs:
-- The request details
-- The response status and body
-- A curl command for manual reproduction
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+    }
 
-**Note**: The script is verbose - look for the actual response in the output.
+    @Autowired
+    private MockMvc mockMvc;
 
-### Method 2: Manual curl with Token
+    @Autowired
+    private ObjectMapper objectMapper;
 
-Use the curl command from the test-auth-route.js output:
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminEndpoint_ShouldSucceed_WhenAdmin() throws Exception {
+        mockMvc.perform(get("/api/admin/users"))
+            .andExpect(status().isOk());
+    }
 
-```bash
-# The script outputs something like:
-# 💡 To test manually with curl:
-# curl -b "refresh_token=eyJhbGci..." http://localhost:3000/blog-api/api/endpoint
-
-# Copy and modify that curl command:
-curl -X POST http://localhost:3000/blog-api/777/submit \
-  -H "Content-Type: application/json" \
-  -b "refresh_token=<COPY_TOKEN_FROM_SCRIPT_OUTPUT>" \
-  -d '{"your": "data"}'
+    @Test
+    @WithMockUser(roles = "USER")
+    void adminEndpoint_ShouldFail_WhenNotAdmin() throws Exception {
+        mockMvc.perform(get("/api/admin/users"))
+            .andExpect(status().isForbidden());
+    }
+}
 ```
 
-### Method 3: Mock Authentication (Development Only - EASIEST)
+## Common Test Patterns
 
-For development, bypass Keycloak entirely using mock auth.
+### Test Validation Errors
 
-#### Setup
+```java
+@Test
+@WithMockUser
+void create_ShouldReturn400_WhenInvalidEmail() throws Exception {
+    CreateUserRequest request = new CreateUserRequest(
+        "invalid-email", "Test User", "password123");
 
-```bash
-# Add to service .env file (e.g., blog-api/.env)
-MOCK_AUTH=true
-MOCK_USER_ID=test-user
-MOCK_USER_ROLES=admin,operations
+    mockMvc.perform(post("/api/users")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors.email").exists());
+}
 ```
 
-#### Usage
+### Test Pagination
 
-```bash
-curl -H "X-Mock-Auth: true" \
-     -H "X-Mock-User: test-user" \
-     -H "X-Mock-Roles: admin,operations" \
-     http://localhost:3002/api/protected
+```java
+@Test
+@WithMockUser
+void findAll_ShouldReturnPaginatedResults() throws Exception {
+    mockMvc.perform(get("/api/users")
+            .param("page", "0")
+            .param("size", "10")
+            .param("sort", "createdAt,desc"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content").isArray())
+        .andExpect(jsonPath("$.totalElements").isNumber())
+        .andExpect(jsonPath("$.totalPages").isNumber());
+}
 ```
 
-#### Mock Auth Requirements
+### Test Authentication Required
 
-Mock auth ONLY works when:
-- `NODE_ENV` is `development` or `test`
-- The `mockAuth` middleware is added to the route
-- Will NEVER work in production (security feature)
-
-## Common Testing Patterns
-
-### Test Form Submission
-
-```bash
-node scripts/test-auth-route.js \
-    http://localhost:3000/blog-api/777/submit \
-    POST \
-    '{"responses":{"4577":"13295"},"submissionID":5,"stepInstanceId":"11"}'
+```java
+@Test
+void create_ShouldReturn401_WhenNotAuthenticated() throws Exception {
+    mockMvc.perform(post("/api/users")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{}"))
+        .andExpect(status().isUnauthorized());
+}
 ```
 
-### Test Workflow Start
+### Test with JWT Token
 
-```bash
-node scripts/test-auth-route.js \
-    http://localhost:3002/api/workflow/start \
-    POST \
-    '{"workflowCode":"DHS_CLOSEOUT","entityType":"Submission","entityID":123}'
+```java
+@Test
+void endpoint_ShouldSucceed_WithValidJwt() throws Exception {
+    String jwt = createTestJwt("user@test.com", List.of("ROLE_USER"));
+
+    mockMvc.perform(get("/api/users/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
+        .andExpect(status().isOk());
+}
+
+private String createTestJwt(String subject, List<String> roles) {
+    return Jwts.builder()
+        .subject(subject)
+        .claim("roles", roles)
+        .issuedAt(new Date())
+        .expiration(Date.from(Instant.now().plus(Duration.ofHours(1))))
+        .signWith(Keys.hmacShaKeyFor("test-secret-key-minimum-32-characters".getBytes()))
+        .compact();
+}
 ```
-
-### Test Workflow Step Completion
-
-```bash
-node scripts/test-auth-route.js \
-    http://localhost:3002/api/workflow/step/complete \
-    POST \
-    '{"stepInstanceID":789,"answers":{"decision":"approved","comments":"Looks good"}}'
-```
-
-### Test GET with Query Parameters
-
-```bash
-node scripts/test-auth-route.js \
-    "http://localhost:3002/api/workflows?status=active&limit=10"
-```
-
-### Test File Upload
-
-```bash
-# Get token from test-auth-route.js first, then:
-curl -X POST http://localhost:5000/upload \
-  -H "Content-Type: multipart/form-data" \
-  -b "refresh_token=<TOKEN>" \
-  -F "file=@/path/to/file.pdf" \
-  -F "metadata={\"description\":\"Test file\"}"
-```
-
-## Hardcoded Test Credentials
-
-The `test-auth-route.js` script uses these credentials:
-
-- **Username**: `testuser`
-- **Password**: `testpassword`
-- **Keycloak URL**: From `config.ini` (usually `http://localhost:8081`)
-- **Realm**: `yourRealm`
-- **Client ID**: From `config.ini`
-
-## Service Ports
-
-| Service | Port | Base URL |
-|---------|------|----------|
-| Users   | 3000 | http://localhost:3000 |
-| Projects| 3001 | http://localhost:3001 |
-| Form    | 3002 | http://localhost:3002 |
-| Email   | 3003 | http://localhost:3003 |
-| Uploads | 5000 | http://localhost:5000 |
-
-## Route Prefixes
-
-Check `/src/app.ts` in each service for route prefixes:
-
-```typescript
-// Example from blog-api/src/app.ts
-app.use('/blog-api/api', formRoutes);          // Prefix: /blog-api/api
-app.use('/api/workflow', workflowRoutes);  // Prefix: /api/workflow
-```
-
-**Full Route** = Base URL + Prefix + Route Path
-
-Example:
-- Base: `http://localhost:3002`
-- Prefix: `/form`
-- Route: `/777/submit`
-- **Full URL**: `http://localhost:3000/blog-api/777/submit`
 
 ## Testing Checklist
 
-Before testing a route:
+Before testing an endpoint:
 
-- [ ] Identify the service (form, email, users, etc.)
-- [ ] Find the correct port
-- [ ] Check route prefixes in `app.ts`
-- [ ] Construct the full URL
+- [ ] Identify the HTTP method (GET, POST, PUT, DELETE)
+- [ ] Determine authentication requirements
 - [ ] Prepare request body (if POST/PUT)
-- [ ] Determine authentication method
+- [ ] Set up mock dependencies or test data
 - [ ] Run the test
-- [ ] Verify response status and data
-- [ ] Check database changes if applicable
-
-## Verifying Database Changes
-
-After testing routes that modify data:
-
-```bash
-# Connect to MySQL
-docker exec -i local-mysql mysql -u root -ppassword1 blog_dev
-
-# Check specific table
-mysql> SELECT * FROM WorkflowInstance WHERE id = 123;
-mysql> SELECT * FROM WorkflowStepInstance WHERE instanceId = 123;
-mysql> SELECT * FROM WorkflowNotification WHERE recipientUserId = 'user-123';
-```
+- [ ] Verify response status
+- [ ] Verify response body
+- [ ] Check database changes (integration tests)
 
 ## Debugging Failed Tests
 
 ### 401 Unauthorized
 
-**Possible causes**:
-1. Token expired (regenerate with test-auth-route.js)
-2. Incorrect cookie format
-3. JWT secret mismatch
-4. Keycloak not running
-
-**Solutions**:
-```bash
-# Check Keycloak is running
-docker ps | grep keycloak
-
-# Regenerate token
-node scripts/test-auth-route.js http://localhost:3002/api/health
-
-# Verify config.ini has correct jwtSecret
-```
+- Add `@WithMockUser` annotation
+- Check security configuration
+- Verify JWT token if using Bearer auth
 
 ### 403 Forbidden
 
-**Possible causes**:
-1. User lacks required role
-2. Resource permissions incorrect
-3. Route requires specific permissions
-
-**Solutions**:
-```bash
-# Use mock auth with admin role
-curl -H "X-Mock-Auth: true" \
-     -H "X-Mock-User: test-admin" \
-     -H "X-Mock-Roles: admin" \
-     http://localhost:3002/api/protected
-```
+- Add appropriate roles: `@WithMockUser(roles = "ADMIN")`
+- Check `@PreAuthorize` annotations
 
 ### 404 Not Found
 
-**Possible causes**:
-1. Incorrect URL
-2. Missing route prefix
-3. Route not registered
+- Verify URL path
+- Check `@RequestMapping` annotations
+- Ensure test data exists (integration tests)
 
-**Solutions**:
-1. Check `app.ts` for route prefixes
-2. Verify route registration
-3. Check service is running (`pm2 list`)
+### 400 Bad Request
 
-### 500 Internal Server Error
+- Check validation constraints
+- Verify request body format
+- Review DTO annotations
 
-**Possible causes**:
-1. Database connection issue
-2. Missing required fields
-3. Validation error
-4. Application error
+## Test Dependencies (pom.xml)
 
-**Solutions**:
-1. Check service logs (`pm2 logs <service>`)
-2. Check Sentry for error details
-3. Verify request body matches expected schema
-4. Check database connectivity
-
-## Using auth-route-tester Agent
-
-For comprehensive route testing after making changes:
-
-1. **Identify affected routes**
-2. **Gather route information**:
-   - Full route path (with prefix)
-   - Expected POST data
-   - Tables to verify
-3. **Invoke auth-route-tester agent**
-
-The agent will:
-- Test the route with proper authentication
-- Verify database changes
-- Check response format
-- Report any issues
-
-## Example Test Scenarios
-
-### After Creating a New Route
-
-```bash
-# 1. Test with valid data
-node scripts/test-auth-route.js \
-    http://localhost:3002/api/my-new-route \
-    POST \
-    '{"field1":"value1","field2":"value2"}'
-
-# 2. Verify database
-docker exec -i local-mysql mysql -u root -ppassword1 blog_dev \
-    -e "SELECT * FROM MyTable ORDER BY createdAt DESC LIMIT 1;"
-
-# 3. Test with invalid data
-node scripts/test-auth-route.js \
-    http://localhost:3002/api/my-new-route \
-    POST \
-    '{"field1":"invalid"}'
-
-# 4. Test without authentication
-curl http://localhost:3002/api/my-new-route
-# Should return 401
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-test</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.testcontainers</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.testcontainers</groupId>
+    <artifactId>postgresql</artifactId>
+    <scope>test</scope>
+</dependency>
 ```
-
-### After Modifying a Route
-
-```bash
-# 1. Test existing functionality still works
-node scripts/test-auth-route.js \
-    http://localhost:3002/api/existing-route \
-    POST \
-    '{"existing":"data"}'
-
-# 2. Test new functionality
-node scripts/test-auth-route.js \
-    http://localhost:3002/api/existing-route \
-    POST \
-    '{"new":"field","existing":"data"}'
-
-# 3. Verify backward compatibility
-# Test with old request format (if applicable)
-```
-
-## Configuration Files
-
-### config.ini (each service)
-
-```ini
-[keycloak]
-url = http://localhost:8081
-realm = yourRealm
-clientId = app-client
-
-[jwt]
-jwtSecret = your-jwt-secret-here
-```
-
-### .env (each service)
-
-```bash
-NODE_ENV=development
-MOCK_AUTH=true           # Optional: Enable mock auth
-MOCK_USER_ID=test-user   # Optional: Default mock user
-MOCK_USER_ROLES=admin    # Optional: Default mock roles
-```
-
-## Key Files
-
-- `/root/git/your project_pre/scripts/test-auth-route.js` - Main testing script
-- `/blog-api/src/app.ts` - Form service routes
-- `/notifications/src/app.ts` - Email service routes
-- `/auth/src/app.ts` - Users service routes
-- `/config.ini` - Service configuration
-- `/.env` - Environment variables
 
 ## Related Skills
 
-- Use **database-verification** to verify database changes
-- Use **error-tracking** to check for captured errors
-- Use **workflow-builder** for workflow route testing
-- Use **notification-sender** to verify notifications sent
+- **backend-dev-guidelines** - Controller patterns being tested
+- **error-tracking** - Exception handling verification

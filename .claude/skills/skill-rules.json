@@ -29,157 +29,145 @@
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",
-            "description": "Backend development patterns for Node.js/Express/TypeScript",
+            "description": "Backend development patterns for Spring Boot 3.x with Lombok and TestContainers",
             "promptTriggers": {
                 "keywords": [
                     "backend",
                     "backend development",
-                    "microservice",
+                    "spring boot",
                     "controller",
                     "service",
                     "repository",
-                    "route",
-                    "routing",
-                    "express",
+                    "entity",
+                    "JPA",
+                    "Hibernate",
                     "API",
                     "endpoint",
-                    "middleware",
+                    "REST",
                     "validation",
-                    "Zod",
-                    "Prisma",
-                    "database access",
-                    "BaseController",
-                    "dependency injection",
-                    "unifiedConfig",
-                    "configuration"
+                    "Bean Validation",
+                    "DTO",
+                    "security",
+                    "Spring Security",
+                    "Lombok",
+                    "TestContainers",
+                    "configuration",
+                    "ConfigurationProperties",
+                    "transaction",
+                    "Transactional",
+                    "docker",
+                    "dockerfile",
+                    "docker-compose",
+                    "containerize",
+                    "container",
+                    "deployment",
+                    "buildpacks",
+                    "jib"
                 ],
                 "intentPatterns": [
-                    "(create|add|implement|build).*?(route|endpoint|API|controller|service|repository)",
+                    "(create|add|implement|build).*?(endpoint|API|controller|service|repository|entity)",
                     "(fix|handle|debug).*?(error|exception|backend)",
-                    "(add|implement).*?(middleware|validation|error.*?handling)",
+                    "(add|implement).*?(validation|error.*?handling|security)",
                     "(organize|structure|refactor).*?(backend|service|API)",
-                    "(how to|best practice).*?(backend|route|controller|service)"
+                    "(how to|best practice).*?(spring|controller|service|JPA)"
                 ]
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "blog-api/src/**/*.ts",
-                    "auth-service/src/**/*.ts",
-                    "notifications-service/src/**/*.ts",
-                    "backend/**/*.ts",
-                    "api/**/*.ts",
-                    "server/**/*.ts",
-                    "services/**/*.ts"
+                    "src/main/java/**/*.java",
+                    "**/controller/**/*.java",
+                    "**/service/**/*.java",
+                    "**/repository/**/*.java",
+                    "**/entity/**/*.java",
+                    "**/dto/**/*.java",
+                    "**/config/**/*.java",
+                    "**/Dockerfile*",
+                    "**/docker-compose*.yml",
+                    "**/docker-compose*.yaml"
                 ],
                 "pathExclusions": [
-                    "**/*.test.ts",
-                    "**/*.spec.ts"
+                    "**/test/**/*.java",
+                    "**/*Test.java",
+                    "**/*Tests.java"
                 ],
                 "contentPatterns": [
-                    "router\\.",
-                    "app\\.(get|post|put|delete|patch)",
-                    "export.*Controller",
-                    "export.*Service",
-                    "prisma\\."
+                    "@RestController",
+                    "@Controller",
+                    "@Service",
+                    "@Repository",
+                    "@Entity",
+                    "@Configuration",
+                    "JpaRepository",
+                    "@Transactional"
                 ]
-            }
-        },
-        "frontend-dev-guidelines": {
-            "type": "guardrail",
-            "enforcement": "block",
-            "priority": "high",
-            "description": "React/TypeScript best practices including MUI v7 compatibility",
-            "promptTriggers": {
-                "keywords": [
-                    "component",
-                    "react component",
-                    "UI",
-                    "interface",
-                    "page",
-                    "modal",
-                    "dialog",
-                    "form",
-                    "MUI",
-                    "Material-UI",
-                    "Grid",
-                    "styling",
-                    "frontend",
-                    "React"
-                ],
-                "intentPatterns": [
-                    "(create|add|make|build|update|modify|edit).*?(component|UI|page|modal|dialog|form)",
-                    "(how to|best practice).*?(component|react|MUI)",
-                    "(style|design|layout).*?(component|UI)"
-                ]
-            },
-            "fileTriggers": {
-                "pathPatterns": [
-                    "frontend/src/**/*.tsx",
-                    "frontend/src/**/*.ts",
-                    "client/src/**/*.tsx",
-                    "client/src/**/*.ts",
-                    "src/**/*.tsx"
-                ],
-                "pathExclusions": [
-                    "**/*.test.tsx",
-                    "**/*.test.ts",
-                    "**/*.spec.tsx",
-                    "**/*.spec.ts",
-                    "**/*.styles.ts",
-                    "**/vite.config.ts",
-                    "**/tsconfig.json"
-                ],
-                "contentPatterns": [
-                    "from '@mui/material';",
-                    "import.*Grid.*from.*@mui",
-                    "<Grid ",
-                    "Grid2",
-                    "Unstable_Grid",
-                    "makeStyles",
-                    "@material-ui/core"
-                ]
-            },
-            "blockMessage": "⚠️ BLOCKED - Frontend Best Practices Required\n\n📋 REQUIRED ACTION:\n1. Use Skill tool: 'frontend-dev-guidelines'\n2. Review MUI v7 patterns (Grid uses size={{}} prop, NOT xs/sm props)\n3. Check React/TypeScript best practices\n4. Use proper styling patterns\n5. Then retry this edit\n\nReason: Enforce MUI v7 compatibility and React best practices\nFile: {file_path}\n\n💡 TIP: Add '// @skip-validation' comment to skip future checks",
-            "skipConditions": {
-                "sessionSkillUsed": true,
-                "fileMarkers": [
-                    "@skip-validation"
-                ],
-                "envOverride": "SKIP_FRONTEND_GUIDELINES"
             }
         },
         "route-tester": {
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",
-            "description": "Testing authenticated API routes with JWT cookie-based auth",
+            "description": "Testing REST endpoints in Spring Boot applications with MockMvc and TestContainers",
             "promptTriggers": {
                 "keywords": [
-                    "test route",
                     "test endpoint",
                     "test API",
-                    "route testing",
-                    "API testing",
-                    "authenticated route",
-                    "JWT testing",
-                    "cookie auth",
-                    "test with auth"
+                    "test controller",
+                    "MockMvc",
+                    "WebMvcTest",
+                    "SpringBootTest",
+                    "TestContainers",
+                    "integration test",
+                    "API testing"
                 ],
                 "intentPatterns": [
-                    "(test|debug|verify).*?(route|endpoint|API)",
-                    "(how to|how do I).*?test.*?(route|endpoint|API)",
-                    "test.*?(authenticated|auth|JWT|cookie)"
+                    "(test|debug|verify).*?(endpoint|API|controller)",
+                    "(how to|how do I).*?test.*?(endpoint|API|controller)",
+                    "test.*?(authenticated|auth|security)"
                 ]
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "**/routes/**/*.ts",
-                    "**/test-*.js",
-                    "**/test-*.ts"
+                    "**/controller/**/*.java",
+                    "**/*Test.java",
+                    "**/*Tests.java",
+                    "**/test/**/*.java"
                 ],
                 "contentPatterns": [
-                    "router\\.(get|post|put|delete|patch)",
-                    "app\\.(get|post|put|delete|patch)"
+                    "@WebMvcTest",
+                    "@SpringBootTest",
+                    "MockMvc",
+                    "@Testcontainers"
+                ]
+            }
+        },
+        "git-workflow": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Git workflow standards for branch management, commits, and pre-commit testing",
+            "promptTriggers": {
+                "keywords": [
+                    "git",
+                    "commit",
+                    "branch",
+                    "merge",
+                    "pull request",
+                    "PR",
+                    "push",
+                    "checkout",
+                    "rebase",
+                    "git workflow",
+                    "commit message",
+                    "feature branch",
+                    "start task",
+                    "start story",
+                    "new feature"
+                ],
+                "intentPatterns": [
+                    "(create|start|make).*?(branch|feature|task)",
+                    "(commit|push|merge).*?(change|code)",
+                    "(how to|best practice).*?(commit|branch|git)",
+                    "(finish|complete|end).*?(task|story|feature)"
                 ]
             }
         },
@@ -187,35 +175,37 @@
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",
-            "description": "Sentry error tracking and performance monitoring patterns",
+            "description": "Centralized logging, exception handling, and monitoring patterns for Spring Boot",
             "promptTriggers": {
                 "keywords": [
                     "error handling",
                     "exception",
-                    "sentry",
+                    "logging",
                     "error tracking",
-                    "captureException",
+                    "ControllerAdvice",
+                    "ExceptionHandler",
                     "monitoring",
-                    "performance tracking"
+                    "Actuator",
+                    "Slf4j"
                 ],
                 "intentPatterns": [
-                    "(add|create|implement|setup).*?(error handling|sentry|error tracking)",
+                    "(add|create|implement|setup).*?(error handling|exception|logging)",
                     "(fix|handle|catch).*?(error|exception)",
-                    "(how to|best practice).*?(error|sentry|monitoring)"
+                    "(how to|best practice).*?(error|logging|monitoring)"
                 ]
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "**/instrument.ts",
-                    "**/sentry*.ts",
-                    "**/*Controller.ts",
-                    "**/*Service.ts"
+                    "**/exception/**/*.java",
+                    "**/*ExceptionHandler.java",
+                    "**/*Controller.java",
+                    "**/*Service.java"
                 ],
                 "contentPatterns": [
-                    "@sentry",
-                    "Sentry\\.",
-                    "captureException",
-                    "captureMessage"
+                    "@ControllerAdvice",
+                    "@ExceptionHandler",
+                    "@Slf4j",
+                    "log\\.(error|warn|info)"
                 ]
             }
         }
@@ -233,7 +223,7 @@
             "low": "Optional - Trigger only for explicit matches"
         },
         "customization": {
-            "pathPatterns": "Adjust to match your project structure (blog-api, auth-service, etc.)",
+            "pathPatterns": "Adjust to match your project structure",
             "keywords": "Add domain-specific terms relevant to your project",
             "intentPatterns": "Use regex for flexible user intent matching"
         }

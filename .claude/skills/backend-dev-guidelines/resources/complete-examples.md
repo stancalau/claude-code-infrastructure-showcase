@@ -1,638 +1,308 @@
-# Complete Examples - Full Working Code
+# Complete Examples - Full Implementation Guide
 
-Real-world examples showing complete implementation patterns.
+End-to-end examples for common Spring Boot patterns.
 
 ## Table of Contents
 
-- [Complete Controller Example](#complete-controller-example)
-- [Complete Service with DI](#complete-service-with-di)
-- [Complete Route File](#complete-route-file)
-- [Complete Repository](#complete-repository)
-- [Refactoring Example: Bad to Good](#refactoring-example-bad-to-good)
-- [End-to-End Feature Example](#end-to-end-feature-example)
+- [CRUD Implementation](#crud-implementation)
+- [Project Setup](#project-setup)
 
 ---
 
-## Complete Controller Example
+## CRUD Implementation
 
-### UserController (Following All Best Practices)
+### Entity
 
-```typescript
-// controllers/UserController.ts
-import { Request, Response } from 'express';
-import { BaseController } from './BaseController';
-import { UserService } from '../services/userService';
-import { createUserSchema, updateUserSchema } from '../validators/userSchemas';
-import { z } from 'zod';
+```java
+@Entity
+@Table(name = "posts")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Post {
 
-export class UserController extends BaseController {
-    private userService: UserService;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    constructor() {
-        super();
-        this.userService = new UserService();
+    @Column(nullable = false)
+    private String title;
+
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
+    @Enumerated(EnumType.STRING)
+    private PostStatus status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id")
+    private User author;
+
+    @CreatedDate
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
+}
+```
+
+### DTOs
+
+```java
+public record CreatePostRequest(
+    @NotBlank String title,
+    @NotBlank String content
+) {}
+
+public record UpdatePostRequest(
+    String title,
+    String content,
+    PostStatus status
+) {}
+
+public record PostResponse(
+    Long id,
+    String title,
+    String content,
+    PostStatus status,
+    AuthorSummary author,
+    LocalDateTime createdAt
+) {}
+
+public record AuthorSummary(Long id, String name) {}
+```
+
+### Repository
+
+```java
+public interface PostRepository extends JpaRepository<Post, Long> {
+
+    @EntityGraph(attributePaths = {"author"})
+    Optional<Post> findWithAuthorById(Long id);
+
+    Page<Post> findByStatus(PostStatus status, Pageable pageable);
+
+    @Query("SELECT p FROM Post p WHERE p.author.id = :authorId")
+    List<Post> findByAuthorId(@Param("authorId") Long authorId);
+}
+```
+
+### Service
+
+```java
+public interface PostService {
+    PostResponse create(CreatePostRequest request, Long authorId);
+    PostResponse findById(Long id);
+    Page<PostResponse> findAll(Pageable pageable);
+    PostResponse update(Long id, UpdatePostRequest request);
+    void delete(Long id);
+}
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class PostServiceImpl implements PostService {
+
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
+    private final PostMapper postMapper;
+
+    @Override
+    @Transactional
+    public PostResponse create(CreatePostRequest request, Long authorId) {
+        User author = userRepository.findById(authorId)
+            .orElseThrow(() -> new ResourceNotFoundException("User", authorId));
+
+        Post post = Post.builder()
+            .title(request.title())
+            .content(request.content())
+            .status(PostStatus.DRAFT)
+            .author(author)
+            .build();
+
+        return postMapper.toResponse(postRepository.save(post));
     }
 
-    async getUser(req: Request, res: Response): Promise<void> {
-        try {
-            this.addBreadcrumb('Fetching user', 'user_controller', {
-                userId: req.params.id,
-            });
-
-            const user = await this.withTransaction(
-                'user.get',
-                'db.query',
-                () => this.userService.findById(req.params.id)
-            );
-
-            if (!user) {
-                return this.handleError(
-                    new Error('User not found'),
-                    res,
-                    'getUser',
-                    404
-                );
-            }
-
-            this.handleSuccess(res, user);
-        } catch (error) {
-            this.handleError(error, res, 'getUser');
-        }
+    @Override
+    @Transactional(readOnly = true)
+    public PostResponse findById(Long id) {
+        return postRepository.findWithAuthorById(id)
+            .map(postMapper::toResponse)
+            .orElseThrow(() -> new ResourceNotFoundException("Post", id));
     }
 
-    async listUsers(req: Request, res: Response): Promise<void> {
-        try {
-            const users = await this.userService.getAll();
-            this.handleSuccess(res, users);
-        } catch (error) {
-            this.handleError(error, res, 'listUsers');
-        }
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PostResponse> findAll(Pageable pageable) {
+        return postRepository.findAll(pageable).map(postMapper::toResponse);
     }
 
-    async createUser(req: Request, res: Response): Promise<void> {
-        try {
-            // Validate input with Zod
-            const validated = createUserSchema.parse(req.body);
+    @Override
+    @Transactional
+    public PostResponse update(Long id, UpdatePostRequest request) {
+        Post post = postRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Post", id));
 
-            // Track performance
-            const user = await this.withTransaction(
-                'user.create',
-                'db.mutation',
-                () => this.userService.create(validated)
-            );
+        if (request.title() != null) post.setTitle(request.title());
+        if (request.content() != null) post.setContent(request.content());
+        if (request.status() != null) post.setStatus(request.status());
 
-            this.handleSuccess(res, user, 'User created successfully', 201);
-        } catch (error) {
-            if (error instanceof z.ZodError) {
-                return this.handleError(error, res, 'createUser', 400);
-            }
-            this.handleError(error, res, 'createUser');
-        }
+        return postMapper.toResponse(postRepository.save(post));
     }
 
-    async updateUser(req: Request, res: Response): Promise<void> {
-        try {
-            const validated = updateUserSchema.parse(req.body);
-
-            const user = await this.userService.update(
-                req.params.id,
-                validated
-            );
-
-            this.handleSuccess(res, user, 'User updated');
-        } catch (error) {
-            if (error instanceof z.ZodError) {
-                return this.handleError(error, res, 'updateUser', 400);
-            }
-            this.handleError(error, res, 'updateUser');
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        if (!postRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Post", id);
         }
-    }
-
-    async deleteUser(req: Request, res: Response): Promise<void> {
-        try {
-            await this.userService.delete(req.params.id);
-            this.handleSuccess(res, null, 'User deleted', 204);
-        } catch (error) {
-            this.handleError(error, res, 'deleteUser');
-        }
+        postRepository.deleteById(id);
     }
 }
 ```
 
----
+### Controller
 
-## Complete Service with DI
+```java
+@RestController
+@RequestMapping("/api/posts")
+@RequiredArgsConstructor
+@Tag(name = "Posts")
+public class PostController {
 
-### UserService
+    private final PostService postService;
 
-```typescript
-// services/userService.ts
-import { UserRepository } from '../repositories/UserRepository';
-import { ConflictError, NotFoundError, ValidationError } from '../types/errors';
-import type { CreateUserDTO, UpdateUserDTO, User } from '../types/user.types';
-
-export class UserService {
-    private userRepository: UserRepository;
-
-    constructor(userRepository?: UserRepository) {
-        this.userRepository = userRepository || new UserRepository();
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
+    public PostResponse create(
+            @Valid @RequestBody CreatePostRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        Long authorId = Long.parseLong(jwt.getSubject());
+        return postService.create(request, authorId);
     }
 
-    async findById(id: string): Promise<User | null> {
-        return await this.userRepository.findById(id);
+    @GetMapping("/{id}")
+    public PostResponse findById(@PathVariable Long id) {
+        return postService.findById(id);
     }
 
-    async getAll(): Promise<User[]> {
-        return await this.userRepository.findActive();
+    @GetMapping
+    public Page<PostResponse> findAll(
+            @PageableDefault(size = 20, sort = "createdAt", direction = DESC)
+            Pageable pageable) {
+        return postService.findAll(pageable);
     }
 
-    async create(data: CreateUserDTO): Promise<User> {
-        // Business rule: validate age
-        if (data.age < 18) {
-            throw new ValidationError('User must be 18 or older');
-        }
-
-        // Business rule: check email uniqueness
-        const existing = await this.userRepository.findByEmail(data.email);
-        if (existing) {
-            throw new ConflictError('Email already in use');
-        }
-
-        // Create user with profile
-        return await this.userRepository.create({
-            email: data.email,
-            profile: {
-                create: {
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                    age: data.age,
-                },
-            },
-        });
+    @PutMapping("/{id}")
+    @PreAuthorize("@postSecurity.isAuthor(#id) or hasRole('ADMIN')")
+    public PostResponse update(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdatePostRequest request) {
+        return postService.update(id, request);
     }
 
-    async update(id: string, data: UpdateUserDTO): Promise<User> {
-        // Check exists
-        const existing = await this.userRepository.findById(id);
-        if (!existing) {
-            throw new NotFoundError('User not found');
-        }
-
-        // Business rule: email uniqueness if changing
-        if (data.email && data.email !== existing.email) {
-            const emailTaken = await this.userRepository.findByEmail(data.email);
-            if (emailTaken) {
-                throw new ConflictError('Email already in use');
-            }
-        }
-
-        return await this.userRepository.update(id, data);
-    }
-
-    async delete(id: string): Promise<void> {
-        const existing = await this.userRepository.findById(id);
-        if (!existing) {
-            throw new NotFoundError('User not found');
-        }
-
-        await this.userRepository.delete(id);
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@postSecurity.isAuthor(#id) or hasRole('ADMIN')")
+    public void delete(@PathVariable Long id) {
+        postService.delete(id);
     }
 }
 ```
 
----
+### Mapper
 
-## Complete Route File
+```java
+@Component
+public class PostMapper {
 
-### userRoutes.ts
-
-```typescript
-// routes/userRoutes.ts
-import { Router } from 'express';
-import { UserController } from '../controllers/UserController';
-import { SSOMiddlewareClient } from '../middleware/SSOMiddleware';
-import { auditMiddleware } from '../middleware/auditMiddleware';
-
-const router = Router();
-const controller = new UserController();
-
-// GET /users - List all users
-router.get('/',
-    SSOMiddlewareClient.verifyLoginStatus,
-    auditMiddleware,
-    async (req, res) => controller.listUsers(req, res)
-);
-
-// GET /users/:id - Get single user
-router.get('/:id',
-    SSOMiddlewareClient.verifyLoginStatus,
-    auditMiddleware,
-    async (req, res) => controller.getUser(req, res)
-);
-
-// POST /users - Create user
-router.post('/',
-    SSOMiddlewareClient.verifyLoginStatus,
-    auditMiddleware,
-    async (req, res) => controller.createUser(req, res)
-);
-
-// PUT /users/:id - Update user
-router.put('/:id',
-    SSOMiddlewareClient.verifyLoginStatus,
-    auditMiddleware,
-    async (req, res) => controller.updateUser(req, res)
-);
-
-// DELETE /users/:id - Delete user
-router.delete('/:id',
-    SSOMiddlewareClient.verifyLoginStatus,
-    auditMiddleware,
-    async (req, res) => controller.deleteUser(req, res)
-);
-
-export default router;
-```
-
----
-
-## Complete Repository
-
-### UserRepository
-
-```typescript
-// repositories/UserRepository.ts
-import { PrismaService } from '@project-lifecycle-portal/database';
-import type { User, Prisma } from '@prisma/client';
-
-export class UserRepository {
-    async findById(id: string): Promise<User | null> {
-        return PrismaService.main.user.findUnique({
-            where: { id },
-            include: { profile: true },
-        });
-    }
-
-    async findByEmail(email: string): Promise<User | null> {
-        return PrismaService.main.user.findUnique({
-            where: { email },
-            include: { profile: true },
-        });
-    }
-
-    async findActive(): Promise<User[]> {
-        return PrismaService.main.user.findMany({
-            where: { isActive: true },
-            include: { profile: true },
-            orderBy: { createdAt: 'desc' },
-        });
-    }
-
-    async create(data: Prisma.UserCreateInput): Promise<User> {
-        return PrismaService.main.user.create({
-            data,
-            include: { profile: true },
-        });
-    }
-
-    async update(id: string, data: Prisma.UserUpdateInput): Promise<User> {
-        return PrismaService.main.user.update({
-            where: { id },
-            data,
-            include: { profile: true },
-        });
-    }
-
-    async delete(id: string): Promise<User> {
-        // Soft delete
-        return PrismaService.main.user.update({
-            where: { id },
-            data: {
-                isActive: false,
-                deletedAt: new Date(),
-            },
-        });
-    }
-}
-```
-
----
-
-## Refactoring Example: Bad to Good
-
-### BEFORE: Business Logic in Routes ❌
-
-```typescript
-// routes/postRoutes.ts (BAD - 200+ lines)
-router.post('/posts', async (req, res) => {
-    try {
-        const username = res.locals.claims.preferred_username;
-        const responses = req.body.responses;
-        const stepInstanceId = req.body.stepInstanceId;
-
-        // ❌ Permission check in route
-        const userId = await userProfileService.getProfileByEmail(username).then(p => p.id);
-        const canComplete = await permissionService.canCompleteStep(userId, stepInstanceId);
-        if (!canComplete) {
-            return res.status(403).json({ error: 'No permission' });
-        }
-
-        // ❌ Business logic in route
-        const post = await postRepository.create({
-            title: req.body.title,
-            content: req.body.content,
-            authorId: userId
-        });
-
-        // ❌ More business logic...
-        if (res.locals.isImpersonating) {
-            impersonationContextStore.storeContext(...);
-        }
-
-        // ... 100+ more lines
-
-        res.json({ success: true, data: result });
-    } catch (e) {
-        handler.handleException(res, e);
-    }
-});
-```
-
-### AFTER: Clean Separation ✅
-
-**1. Clean Route:**
-```typescript
-// routes/postRoutes.ts
-import { PostController } from '../controllers/PostController';
-
-const router = Router();
-const controller = new PostController();
-
-// ✅ CLEAN: 8 lines total!
-router.post('/',
-    SSOMiddlewareClient.verifyLoginStatus,
-    auditMiddleware,
-    async (req, res) => controller.createPost(req, res)
-);
-
-export default router;
-```
-
-**2. Controller:**
-```typescript
-// controllers/PostController.ts
-export class PostController extends BaseController {
-    private postService: PostService;
-
-    constructor() {
-        super();
-        this.postService = new PostService();
-    }
-
-    async createPost(req: Request, res: Response): Promise<void> {
-        try {
-            const validated = createPostSchema.parse({
-                ...req.body,
-            });
-
-            const result = await this.postService.createPost(
-                validated,
-                res.locals.userId
-            );
-
-            this.handleSuccess(res, result, 'Post created successfully');
-        } catch (error) {
-            this.handleError(error, res, 'createPost');
-        }
-    }
-}
-```
-
-**3. Service:**
-```typescript
-// services/postService.ts
-export class PostService {
-    async createPost(
-        data: CreatePostDTO,
-        userId: string
-    ): Promise<SubmissionResult> {
-        // Permission check
-        const canComplete = await permissionService.canCompleteStep(
-            userId,
-            data.stepInstanceId
+    public PostResponse toResponse(Post post) {
+        return new PostResponse(
+            post.getId(),
+            post.getTitle(),
+            post.getContent(),
+            post.getStatus(),
+            toAuthorSummary(post.getAuthor()),
+            post.getCreatedAt()
         );
-
-        if (!canComplete) {
-            throw new ForbiddenError('No permission to complete step');
-        }
-
-        // Execute workflow
-        const engine = await createWorkflowEngine();
-        const command = new CompleteStepCommand(
-            data.stepInstanceId,
-            userId,
-            data.responses
-        );
-        const events = await engine.executeCommand(command);
-
-        // Handle impersonation
-        if (context.isImpersonating) {
-            await this.handleImpersonation(data.stepInstanceId, context);
-        }
-
-        return { events, success: true };
     }
 
-    private async handleImpersonation(stepInstanceId: number, context: any) {
-        impersonationContextStore.storeContext(stepInstanceId, {
-            originalUserId: context.originalUserId,
-            effectiveUserId: context.effectiveUserId,
-        });
+    private AuthorSummary toAuthorSummary(User author) {
+        if (author == null) return null;
+        return new AuthorSummary(author.getId(), author.getName());
     }
 }
 ```
-
-**Result:**
-- Route: 8 lines (was 200+)
-- Controller: 25 lines
-- Service: 40 lines
-- **Testable, maintainable, reusable!**
 
 ---
 
-## End-to-End Feature Example
+## Project Setup
 
-### Complete User Management Feature
+### pom.xml Dependencies
 
-**1. Types:**
-```typescript
-// types/user.types.ts
-export interface User {
-    id: string;
-    email: string;
-    isActive: boolean;
-    profile?: UserProfile;
-}
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
 
-export interface CreateUserDTO {
-    email: string;
-    firstName: string;
-    lastName: string;
-    age: number;
-}
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
 
-export interface UpdateUserDTO {
-    email?: string;
-    firstName?: string;
-    lastName?: string;
-}
-```
-
-**2. Validators:**
-```typescript
-// validators/userSchemas.ts
-import { z } from 'zod';
-
-export const createUserSchema = z.object({
-    email: z.string().email(),
-    firstName: z.string().min(1).max(100),
-    lastName: z.string().min(1).max(100),
-    age: z.number().int().min(18).max(120),
-});
-
-export const updateUserSchema = z.object({
-    email: z.string().email().optional(),
-    firstName: z.string().min(1).max(100).optional(),
-    lastName: z.string().min(1).max(100).optional(),
-});
-```
-
-**3. Repository:**
-```typescript
-// repositories/UserRepository.ts
-export class UserRepository {
-    async findById(id: string): Promise<User | null> {
-        return PrismaService.main.user.findUnique({
-            where: { id },
-            include: { profile: true },
-        });
-    }
-
-    async create(data: Prisma.UserCreateInput): Promise<User> {
-        return PrismaService.main.user.create({
-            data,
-            include: { profile: true },
-        });
-    }
-}
-```
-
-**4. Service:**
-```typescript
-// services/userService.ts
-export class UserService {
-    private userRepository: UserRepository;
-
-    constructor() {
-        this.userRepository = new UserRepository();
-    }
-
-    async create(data: CreateUserDTO): Promise<User> {
-        const existing = await this.userRepository.findByEmail(data.email);
-        if (existing) {
-            throw new ConflictError('Email already exists');
-        }
-
-        return await this.userRepository.create({
-            email: data.email,
-            profile: {
-                create: {
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                    age: data.age,
-                },
-            },
-        });
-    }
-}
-```
-
-**5. Controller:**
-```typescript
-// controllers/UserController.ts
-export class UserController extends BaseController {
-    private userService: UserService;
-
-    constructor() {
-        super();
-        this.userService = new UserService();
-    }
-
-    async createUser(req: Request, res: Response): Promise<void> {
-        try {
-            const validated = createUserSchema.parse(req.body);
-            const user = await this.userService.create(validated);
-            this.handleSuccess(res, user, 'User created', 201);
-        } catch (error) {
-            this.handleError(error, res, 'createUser');
-        }
-    }
-}
-```
-
-**6. Routes:**
-```typescript
-// routes/userRoutes.ts
-const router = Router();
-const controller = new UserController();
-
-router.post('/',
-    SSOMiddlewareClient.verifyLoginStatus,
-    async (req, res) => controller.createUser(req, res)
-);
-
-export default router;
-```
-
-**7. Register in app.ts:**
-```typescript
-// app.ts
-import userRoutes from './routes/userRoutes';
-
-app.use('/api/users', userRoutes);
-```
-
-**Complete Request Flow:**
-```
-POST /api/users
-  ↓
-userRoutes matches /
-  ↓
-SSOMiddleware authenticates
-  ↓
-controller.createUser called
-  ↓
-Validates with Zod
-  ↓
-userService.create called
-  ↓
-Checks business rules
-  ↓
-userRepository.create called
-  ↓
-Prisma creates user
-  ↓
-Returns up the chain
-  ↓
-Controller formats response
-  ↓
-200/201 sent to client
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.security</groupId>
+        <artifactId>spring-security-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
 ```
 
 ---
 
 **Related Files:**
-- [SKILL.md](SKILL.md)
-- [routing-and-controllers.md](routing-and-controllers.md)
-- [services-and-repositories.md](services-and-repositories.md)
-- [validation-patterns.md](validation-patterns.md)
+- [SKILL.md](../SKILL.md) - Main guide
+- [architecture-overview.md](architecture-overview.md) - Architecture
+- [testing-guide.md](testing-guide.md) - Testing examples

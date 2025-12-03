@@ -1,12 +1,11 @@
-# Architecture Overview - Backend Services
+# Architecture Overview - Spring Boot Applications
 
-Complete guide to the layered architecture pattern used in backend microservices.
+Complete guide to the layered architecture pattern used in Spring Boot applications.
 
 ## Table of Contents
 
 - [Layered Architecture Pattern](#layered-architecture-pattern)
 - [Request Lifecycle](#request-lifecycle)
-- [Service Comparison](#service-comparison)
 - [Directory Structure Rationale](#directory-structure-rationale)
 - [Module Organization](#module-organization)
 - [Separation of Concerns](#separation-of-concerns)
@@ -15,7 +14,7 @@ Complete guide to the layered architecture pattern used in backend microservices
 
 ## Layered Architecture Pattern
 
-### The Four Layers
+### The Three Layers
 
 ```
 ┌─────────────────────────────────────┐
@@ -23,40 +22,31 @@ Complete guide to the layered architecture pattern used in backend microservices
 └───────────────┬─────────────────────┘
                 ↓
 ┌─────────────────────────────────────┐
-│  Layer 1: ROUTES                    │
-│  - Route definitions only           │
-│  - Middleware registration          │
-│  - Delegate to controllers          │
+│  Layer 1: CONTROLLERS               │
+│  - REST endpoints                   │
+│  - Input validation                 │
+│  - Call services                    │
+│  - Format responses                 │
 │  - NO business logic                │
 └───────────────┬─────────────────────┘
                 ↓
 ┌─────────────────────────────────────┐
-│  Layer 2: CONTROLLERS               │
-│  - Request/response handling        │
-│  - Input validation                 │
-│  - Call services                    │
-│  - Format responses                 │
-│  - Error handling                   │
-└───────────────┬─────────────────────┘
-                ↓
-┌─────────────────────────────────────┐
-│  Layer 3: SERVICES                  │
+│  Layer 2: SERVICES                  │
 │  - Business logic                   │
+│  - Transaction management           │
 │  - Orchestration                    │
-│  - Call repositories                │
 │  - No HTTP knowledge                │
 └───────────────┬─────────────────────┘
                 ↓
 ┌─────────────────────────────────────┐
-│  Layer 4: REPOSITORIES              │
+│  Layer 3: REPOSITORIES              │
 │  - Data access abstraction          │
-│  - Prisma operations                │
+│  - JPA/Hibernate operations         │
 │  - Query optimization               │
-│  - Caching                          │
 └───────────────┬─────────────────────┘
                 ↓
 ┌─────────────────────────────────────┐
-│         Database (MySQL)            │
+│         Database (PostgreSQL/MySQL) │
 └─────────────────────────────────────┘
 ```
 
@@ -64,7 +54,7 @@ Complete guide to the layered architecture pattern used in backend microservices
 
 **Testability:**
 - Each layer can be tested independently
-- Easy to mock dependencies
+- Easy to mock dependencies with `@MockBean`
 - Clear test boundaries
 
 **Maintainability:**
@@ -73,7 +63,7 @@ Complete guide to the layered architecture pattern used in backend microservices
 - Easy to locate bugs
 
 **Reusability:**
-- Services can be used by routes, cron jobs, scripts
+- Services can be used by controllers, scheduled tasks, event listeners
 - Repositories hide database implementation
 - Business logic not tied to HTTP
 
@@ -88,272 +78,236 @@ Complete guide to the layered architecture pattern used in backend microservices
 
 ### Complete Flow Example
 
-```typescript
+```java
 1. HTTP POST /api/users
    ↓
-2. Express matches route in userRoutes.ts
+2. Spring DispatcherServlet routes to UserController
    ↓
-3. Middleware chain executes:
-   - SSOMiddleware.verifyLoginStatus (authentication)
-   - auditMiddleware (context tracking)
+3. Filter chain executes:
+   - SecurityFilterChain (authentication)
+   - RequestLoggingFilter (optional)
    ↓
-4. Route handler delegates to controller:
-   router.post('/users', (req, res) => userController.create(req, res))
+4. Controller method handles request:
+   @PostMapping
+   public ResponseEntity<UserResponse> create(@Valid @RequestBody CreateUserRequest request)
    ↓
-5. Controller validates and calls service:
-   - Validate input with Zod
-   - Call userService.create(data)
-   - Handle success/error
+5. Controller calls service:
+   - Validation already done via @Valid
+   - Call userService.create(request)
+   - Return ResponseEntity
    ↓
 6. Service executes business logic:
    - Check business rules
-   - Call userRepository.create(data)
-   - Return result
+   - Call userRepository.save(entity)
+   - Return mapped DTO
    ↓
 7. Repository performs database operation:
-   - PrismaService.main.user.create({ data })
-   - Handle database errors
-   - Return created user
+   - JPA/Hibernate generates SQL
+   - Transaction committed
+   - Return saved entity
    ↓
 8. Response flows back:
-   Repository → Service → Controller → Express → Client
+   Repository → Service → Controller → Client
 ```
 
-### Middleware Execution Order
+### Spring Security Filter Chain
 
-**Critical:** Middleware executes in registration order
+**Critical:** Filters execute in registration order
 
-```typescript
-app.use(Sentry.Handlers.requestHandler());  // 1. Sentry tracing (FIRST)
-app.use(express.json());                     // 2. Body parsing
-app.use(express.urlencoded({ extended: true })); // 3. URL encoding
-app.use(cookieParser());                     // 4. Cookie parsing
-app.use(SSOMiddleware.initialize());         // 5. Auth initialization
-// ... routes registered here
-app.use(auditMiddleware);                    // 6. Audit (if global)
-app.use(errorBoundary);                      // 7. Error handler (LAST)
-app.use(Sentry.Handlers.errorHandler());     // 8. Sentry errors (LAST)
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated())
+            .oauth2ResourceServer(oauth2 ->
+                oauth2.jwt(Customizer.withDefaults()))
+            .build();
+    }
+}
 ```
-
-**Rule:** Error handlers must be registered AFTER routes!
-
----
-
-## Service Comparison
-
-### Email Service (Mature Pattern ✅)
-
-**Strengths:**
-- Comprehensive BaseController with Sentry integration
-- Clean route delegation (no business logic in routes)
-- Consistent dependency injection pattern
-- Good middleware organization
-- Type-safe throughout
-- Excellent error handling
-
-**Example Structure:**
-```
-email/src/
-├── controllers/
-│   ├── BaseController.ts          ✅ Excellent template
-│   ├── NotificationController.ts  ✅ Extends BaseController
-│   └── EmailController.ts         ✅ Clean patterns
-├── routes/
-│   ├── notificationRoutes.ts      ✅ Clean delegation
-│   └── emailRoutes.ts             ✅ No business logic
-├── services/
-│   ├── NotificationService.ts     ✅ Dependency injection
-│   └── BatchingService.ts         ✅ Clear responsibility
-└── middleware/
-    ├── errorBoundary.ts           ✅ Comprehensive
-    └── DevImpersonationSSOMiddleware.ts
-```
-
-**Use as template** for new services!
-
-### Form Service (Transitioning ⚠️)
-
-**Strengths:**
-- Excellent workflow architecture (event sourcing)
-- Good Sentry integration
-- Innovative audit middleware (AsyncLocalStorage)
-- Comprehensive permission system
-
-**Weaknesses:**
-- Some routes have 200+ lines of business logic
-- Inconsistent controller naming
-- Direct process.env usage (60+ occurrences)
-- Minimal repository pattern usage
-
-**Example:**
-```
-form/src/
-├── routes/
-│   ├── responseRoutes.ts          ❌ Business logic in routes
-│   └── proxyRoutes.ts             ✅ Good validation pattern
-├── controllers/
-│   ├── formController.ts          ⚠️ Lowercase naming
-│   └── UserProfileController.ts   ✅ PascalCase naming
-├── workflow/                      ✅ Excellent architecture!
-│   ├── core/
-│   │   ├── WorkflowEngineV3.ts   ✅ Event sourcing
-│   │   └── DryRunWrapper.ts      ✅ Innovative
-│   └── services/
-└── middleware/
-    └── auditMiddleware.ts         ✅ AsyncLocalStorage pattern
-```
-
-**Learn from:** workflow/, middleware/auditMiddleware.ts
-**Avoid:** responseRoutes.ts, direct process.env
 
 ---
 
 ## Directory Structure Rationale
+
+### Standard Spring Boot Structure
+
+```
+src/main/java/com/company/app/
+├── config/              # Configuration classes
+│   ├── SecurityConfig.java
+│   ├── JpaConfig.java
+│   └── AppProperties.java
+├── controller/          # REST controllers
+│   └── UserController.java
+├── service/             # Business logic
+│   ├── UserService.java
+│   └── impl/
+│       └── UserServiceImpl.java
+├── repository/          # Spring Data JPA repositories
+│   └── UserRepository.java
+├── entity/              # JPA entities
+│   └── User.java
+├── dto/                 # Data Transfer Objects
+│   ├── request/
+│   │   └── CreateUserRequest.java
+│   └── response/
+│       └── UserResponse.java
+├── mapper/              # Entity ↔ DTO mappers
+│   └── UserMapper.java
+├── exception/           # Custom exceptions
+│   ├── ResourceNotFoundException.java
+│   └── GlobalExceptionHandler.java
+├── security/            # Security components
+│   └── JwtTokenProvider.java
+└── Application.java     # Main entry point
+```
 
 ### Controllers Directory
 
 **Purpose:** Handle HTTP request/response concerns
 
 **Contents:**
-- `BaseController.ts` - Base class with common methods
-- `{Feature}Controller.ts` - Feature-specific controllers
+- `{Feature}Controller.java` - Feature-specific controllers
 
 **Naming:** PascalCase + Controller
 
 **Responsibilities:**
-- Parse request parameters
-- Validate input (Zod)
+- Define REST endpoints with `@RestController`
+- Parse request parameters (`@PathVariable`, `@RequestParam`, `@RequestBody`)
+- Validate input with `@Valid`
 - Call appropriate service methods
-- Format responses
-- Handle errors (via BaseController)
-- Set HTTP status codes
+- Return `ResponseEntity<T>`
 
 ### Services Directory
 
 **Purpose:** Business logic and orchestration
 
 **Contents:**
-- `{feature}Service.ts` - Feature business logic
+- `{Feature}Service.java` - Service interface
+- `impl/{Feature}ServiceImpl.java` - Implementation
 
-**Naming:** camelCase + Service (or PascalCase + Service)
+**Naming:** PascalCase + Service
 
 **Responsibilities:**
 - Implement business rules
 - Orchestrate multiple repositories
-- Transaction management
+- Transaction management (`@Transactional`)
 - Business validations
-- No HTTP knowledge (Request/Response types)
+- No HTTP knowledge (never use `HttpServletRequest`)
 
 ### Repositories Directory
 
 **Purpose:** Data access abstraction
 
 **Contents:**
-- `{Entity}Repository.ts` - Database operations for entity
+- `{Entity}Repository.java` - Spring Data JPA interface
 
 **Naming:** PascalCase + Repository
 
 **Responsibilities:**
-- Prisma query operations
-- Query optimization
-- Database error handling
-- Caching layer
-- Hide Prisma implementation details
+- Extend `JpaRepository<Entity, ID>`
+- Custom query methods
+- Query optimization (`@EntityGraph`, `@Query`)
 
-**Current Gap:** Only 1 repository exists (WorkflowRepository)
+### Entity Directory
 
-### Routes Directory
-
-**Purpose:** Route registration ONLY
+**Purpose:** JPA entity definitions
 
 **Contents:**
-- `{feature}Routes.ts` - Express router for feature
+- `{Entity}.java` - JPA entities with Lombok
 
-**Naming:** camelCase + Routes
+**Pattern:**
+```java
+@Entity
+@Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+}
+```
 
-**Responsibilities:**
-- Register routes with Express
-- Apply middleware
-- Delegate to controllers
-- **NO business logic!**
+### DTO Directory
 
-### Middleware Directory
-
-**Purpose:** Cross-cutting concerns
-
-**Contents:**
-- Authentication middleware
-- Audit middleware
-- Error boundaries
-- Validation middleware
-- Custom middleware
-
-**Naming:** camelCase
-
-**Types:**
-- Request processing (before handler)
-- Response processing (after handler)
-- Error handling (error boundary)
-
-### Config Directory
-
-**Purpose:** Configuration management
+**Purpose:** Data Transfer Objects
 
 **Contents:**
-- `unifiedConfig.ts` - Type-safe configuration
-- Environment-specific configs
+- `request/` - Incoming request DTOs
+- `response/` - Outgoing response DTOs
 
-**Pattern:** Single source of truth
-
-### Types Directory
-
-**Purpose:** TypeScript type definitions
-
-**Contents:**
-- `{feature}.types.ts` - Feature-specific types
-- DTOs (Data Transfer Objects)
-- Request/Response types
-- Domain models
+**Pattern:** Use Java Records for immutability:
+```java
+public record CreateUserRequest(
+    @NotBlank String email,
+    @NotBlank String name
+) {}
+```
 
 ---
 
 ## Module Organization
 
-### Feature-Based Organization
+### Feature-Based Organization (Large Applications)
 
-For large features, use subdirectories:
-
-```
-src/workflow/
-├── core/              # Core engine
-├── services/          # Workflow-specific services
-├── actions/           # System actions
-├── models/            # Domain models
-├── validators/        # Workflow validation
-└── utils/             # Workflow utilities
-```
-
-**When to use:**
-- Feature has 5+ files
-- Clear sub-domains exist
-- Logical grouping improves clarity
-
-### Flat Organization
-
-For simple features:
+For large features, organize by domain:
 
 ```
-src/
-├── controllers/UserController.ts
-├── services/userService.ts
-├── routes/userRoutes.ts
-└── repositories/UserRepository.ts
+src/main/java/com/company/app/
+├── user/
+│   ├── controller/
+│   ├── service/
+│   ├── repository/
+│   ├── entity/
+│   └── dto/
+├── order/
+│   ├── controller/
+│   ├── service/
+│   ├── repository/
+│   ├── entity/
+│   └── dto/
+└── common/
+    ├── exception/
+    ├── config/
+    └── security/
 ```
 
 **When to use:**
-- Simple features (< 5 files)
-- No clear sub-domains
-- Flat structure is clearer
+- Application has 10+ entities
+- Clear bounded contexts exist
+- Multiple teams work on different features
+
+### Flat Organization (Standard Applications)
+
+```
+src/main/java/com/company/app/
+├── controller/
+├── service/
+├── repository/
+├── entity/
+├── dto/
+└── config/
+```
+
+**When to use:**
+- Application has < 10 entities
+- Single team
+- Clear layer separation is sufficient
 
 ---
 
@@ -361,83 +315,84 @@ src/
 
 ### What Goes Where
 
-**Routes Layer:**
-- ✅ Route definitions
-- ✅ Middleware registration
-- ✅ Controller delegation
-- ❌ Business logic
-- ❌ Database operations
-- ❌ Validation logic (should be in validator or controller)
-
 **Controllers Layer:**
-- ✅ Request parsing (params, body, query)
-- ✅ Input validation (Zod)
+- ✅ REST endpoint definitions
+- ✅ Request validation (`@Valid`)
 - ✅ Service calls
 - ✅ Response formatting
-- ✅ Error handling
 - ❌ Business logic
 - ❌ Database operations
+- ❌ Transaction management
 
 **Services Layer:**
 - ✅ Business logic
 - ✅ Business rules enforcement
 - ✅ Orchestration (multiple repos)
-- ✅ Transaction management
+- ✅ Transaction management (`@Transactional`)
+- ✅ DTO ↔ Entity mapping
 - ❌ HTTP concerns (Request/Response)
-- ❌ Direct Prisma calls (use repositories)
+- ❌ Direct SQL (use repositories)
 
 **Repositories Layer:**
-- ✅ Prisma operations
-- ✅ Query construction
-- ✅ Database error handling
-- ✅ Caching
+- ✅ JPA operations
+- ✅ Custom queries (`@Query`)
+- ✅ Entity graph optimization
 - ❌ Business logic
 - ❌ HTTP concerns
+- ❌ Transaction management (let service handle)
 
 ### Example: User Creation
 
-**Route:**
-```typescript
-router.post('/users',
-    SSOMiddleware.verifyLoginStatus,
-    auditMiddleware,
-    (req, res) => userController.create(req, res)
-);
-```
-
 **Controller:**
-```typescript
-async create(req: Request, res: Response): Promise<void> {
-    try {
-        const validated = createUserSchema.parse(req.body);
-        const user = await this.userService.create(validated);
-        this.handleSuccess(res, user, 'User created');
-    } catch (error) {
-        this.handleError(error, res, 'create');
+```java
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserService userService;
+
+    @PostMapping
+    public ResponseEntity<UserResponse> create(
+            @Valid @RequestBody CreateUserRequest request) {
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(userService.create(request));
     }
 }
 ```
 
 **Service:**
-```typescript
-async create(data: CreateUserDTO): Promise<User> {
-    // Business rule: check if email already exists
-    const existing = await this.userRepository.findByEmail(data.email);
-    if (existing) throw new ConflictError('Email already exists');
+```java
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class UserServiceImpl implements UserService {
 
-    // Create user
-    return await this.userRepository.create(data);
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+
+    @Override
+    @Transactional
+    public UserResponse create(CreateUserRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new ConflictException("Email already exists");
+        }
+
+        User user = userMapper.toEntity(request);
+        User saved = userRepository.save(user);
+
+        log.info("Created user with id: {}", saved.getId());
+        return userMapper.toResponse(saved);
+    }
 }
 ```
 
 **Repository:**
-```typescript
-async create(data: CreateUserDTO): Promise<User> {
-    return PrismaService.main.user.create({ data });
-}
-
-async findByEmail(email: string): Promise<User | null> {
-    return PrismaService.main.user.findUnique({ where: { email } });
+```java
+public interface UserRepository extends JpaRepository<User, Long> {
+    boolean existsByEmail(String email);
+    Optional<User> findByEmail(String email);
 }
 ```
 
@@ -446,6 +401,6 @@ async findByEmail(email: string): Promise<User | null> {
 ---
 
 **Related Files:**
-- [SKILL.md](SKILL.md) - Main guide
-- [routing-and-controllers.md](routing-and-controllers.md) - Routes and controllers details
-- [services-and-repositories.md](services-and-repositories.md) - Service and repository patterns
+- [SKILL.md](../SKILL.md) - Main guide
+- [controllers-and-endpoints.md](controllers-and-endpoints.md) - Controller patterns
+- [services-and-repositories.md](services-and-repositories.md) - Service patterns

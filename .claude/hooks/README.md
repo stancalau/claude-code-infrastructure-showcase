@@ -1,50 +1,77 @@
 # Hooks
 
-Claude Code hooks that enable skill auto-activation, file tracking, and validation.
+Cross-platform Claude Code hooks for Spring Boot development. Written in TypeScript, works on Windows, Linux, and Mac.
 
 ---
 
-## What Are Hooks?
+## Prerequisites
 
-Hooks are scripts that run at specific points in Claude's workflow:
-- **UserPromptSubmit**: When user submits a prompt
-- **PreToolUse**: Before a tool executes  
-- **PostToolUse**: After a tool completes
-- **Stop**: When user requests to stop
+**Node.js is required** for hooks to work. The hooks are written in TypeScript and run via `npx tsx`.
 
-**Key insight:** Hooks can modify prompts, block actions, and track state - enabling features Claude can't do alone.
+### Check Node.js Installation
+
+```bash
+node --version
+npm --version
+```
+
+### Install Node.js
+
+**Windows:**
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+**Mac:**
+```bash
+brew install node
+```
 
 ---
 
-## Essential Hooks (Start Here)
+## Setup (All Platforms)
+
+```bash
+cd .claude/hooks
+npm install
+```
+
+---
+
+## Available Hooks
 
 ### skill-activation-prompt (UserPromptSubmit)
 
-**Purpose:** Automatically suggests relevant skills based on user prompts and file context
+**Purpose:** Automatically suggests relevant skills based on user prompts
 
 **How it works:**
 1. Reads `skill-rules.json`
 2. Matches user prompt against trigger patterns
-3. Checks which files user is working with
-4. Injects skill suggestions into Claude's context
+3. Injects skill suggestions into Claude's context
 
 **Why it's essential:** This is THE hook that makes skills auto-activate.
 
-**Integration:**
-```bash
-# Copy both files
-cp skill-activation-prompt.sh your-project/.claude/hooks/
-cp skill-activation-prompt.ts your-project/.claude/hooks/
+### error-handling-reminder (Stop)
 
-# Make executable
-chmod +x your-project/.claude/hooks/skill-activation-prompt.sh
+**Purpose:** Reminds about Spring Boot best practices when Java files are edited
 
-# Install dependencies
-cd your-project/.claude/hooks
-npm install
-```
+**Checks for:**
+- Controllers without @Slf4j logging
+- Services without @Transactional
+- Missing @ControllerAdvice for exception handling
 
-**Add to settings.json:**
+---
+
+## Configuration
+
+Add to `.claude/settings.json` - **same configuration works on all platforms:**
+
 ```json
 {
   "hooks": {
@@ -53,51 +80,17 @@ npm install
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-activation-prompt.sh"
+            "command": "npx tsx .claude/hooks/skill-activation-prompt.ts"
           }
         ]
       }
-    ]
-  }
-}
-```
-
-**Customization:** ✅ None needed - reads skill-rules.json automatically
-
----
-
-### post-tool-use-tracker (PostToolUse)
-
-**Purpose:** Tracks file changes to maintain context across sessions
-
-**How it works:**
-1. Monitors Edit/Write/MultiEdit tool calls
-2. Records which files were modified
-3. Creates cache for context management
-4. Auto-detects project structure (frontend, backend, packages, etc.)
-
-**Why it's essential:** Helps Claude understand what parts of your codebase are active.
-
-**Integration:**
-```bash
-# Copy file
-cp post-tool-use-tracker.sh your-project/.claude/hooks/
-
-# Make executable
-chmod +x your-project/.claude/hooks/post-tool-use-tracker.sh
-```
-
-**Add to settings.json:**
-```json
-{
-  "hooks": {
-    "PostToolUse": [
+    ],
+    "Stop": [
       {
-        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.sh"
+            "command": "npx tsx .claude/hooks/error-handling-reminder.ts"
           }
         ]
       }
@@ -106,45 +99,95 @@ chmod +x your-project/.claude/hooks/post-tool-use-tracker.sh
 }
 ```
 
-**Customization:** ✅ None needed - auto-detects structure
+---
+
+## Full Configuration Example
+
+```json
+{
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": ["Edit:*", "Write:*", "Bash:*"],
+    "defaultMode": "acceptEdits"
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/skill-activation-prompt.ts"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/error-handling-reminder.ts"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
 
 ---
 
-## Optional Hooks (Require Customization)
+## What Are Hooks?
 
-### tsc-check (Stop)
+Hooks are scripts that run at specific points in Claude's workflow:
+- **UserPromptSubmit**: When user submits a prompt
+- **PreToolUse**: Before a tool executes
+- **PostToolUse**: After a tool completes
+- **Stop**: When Claude stops working
 
-**Purpose:** TypeScript compilation check when user stops
-
-**⚠️ WARNING:** Configured for multi-service monorepo structure
-
-**Integration:**
-
-**First, determine if this is right for you:**
-- ✅ Use if: Multi-service TypeScript monorepo
-- ❌ Skip if: Single-service project or different build setup
-
-**If using:**
-1. Copy tsc-check.sh
-2. **EDIT the service detection (line ~28):**
-   ```bash
-   # Replace example services with YOUR services:
-   case "$repo" in
-       api|web|auth|payments|...)  # ← Your actual services
-   ```
-3. Test manually before adding to settings.json
-
-**Customization:** ⚠️⚠️⚠️ Heavy
+**Key insight:** Hooks can modify prompts, block actions, and track state - enabling features Claude can't do alone.
 
 ---
 
-### trigger-build-resolver (Stop)
+## Environment Variables
 
-**Purpose:** Auto-launches build-error-resolver agent when compilation fails
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CLAUDE_PROJECT_DIR` | Project root directory | Current working directory |
+| `SKIP_ERROR_REMINDER` | Set to `1` to disable error reminders | Not set |
 
-**Depends on:** tsc-check hook working correctly
+---
 
-**Customization:** ✅ None (but tsc-check must work first)
+## Hook Files
+
+| File | Purpose |
+|------|---------|
+| `skill-activation-prompt.ts` | Auto-suggest skills based on prompt |
+| `error-handling-reminder.ts` | Spring Boot best practice reminders |
+| `package.json` | npm dependencies (tsx) |
+| `tsconfig.json` | TypeScript configuration |
+
+---
+
+## Troubleshooting
+
+### "npx: command not found"
+
+Node.js is not installed or not in PATH. See installation instructions above.
+
+### "Cannot find module 'tsx'"
+
+Run npm install in the hooks directory:
+```bash
+cd .claude/hooks
+npm install
+```
+
+### Hooks not running
+
+1. Verify settings.json has hooks configured
+2. Check Node.js is installed: `node --version`
+3. Verify dependencies: `npm list` in .claude/hooks
 
 ---
 
@@ -152,12 +195,11 @@ chmod +x your-project/.claude/hooks/post-tool-use-tracker.sh
 
 **When setting up hooks for a user:**
 
-1. **Read [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)** first
-2. **Always start with the two essential hooks**
-3. **Ask before adding Stop hooks** - they can block if misconfigured  
-4. **Verify after setup:**
-   ```bash
-   ls -la .claude/hooks/*.sh | grep rwx
-   ```
+1. **Check Node.js:** `node --version`
+2. **Install dependencies:** `cd .claude/hooks && npm install`
+3. **Add hook configuration** to `.claude/settings.json`
+4. **Test:** The hook should run on next prompt
+
+**Note:** The same `npx tsx` command works on Windows, Linux, and Mac - no platform-specific configuration needed.
 
 **Questions?** See [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)

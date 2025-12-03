@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { homedir } from 'os';
 
 interface HookInput {
     session_id: string;
@@ -16,62 +17,47 @@ interface EditedFile {
     timestamp: string;
 }
 
-interface SessionTracking {
-    edited_files: EditedFile[];
-}
+function getFileCategory(filePath: string): 'controller' | 'service' | 'repository' | 'config' | 'test' | 'other' {
+    const normalizedPath = filePath.replace(/\\/g, '/');
 
-function getFileCategory(filePath: string): 'backend' | 'frontend' | 'database' | 'other' {
-    // Frontend detection
-    if (filePath.includes('/frontend/') ||
-        filePath.includes('/client/') ||
-        filePath.includes('/src/components/') ||
-        filePath.includes('/src/features/')) return 'frontend';
-
-    // Backend detection (common service directories)
-    if (filePath.includes('/src/controllers/') ||
-        filePath.includes('/src/services/') ||
-        filePath.includes('/src/routes/') ||
-        filePath.includes('/src/api/') ||
-        filePath.includes('/server/')) return 'backend';
-
-    // Database detection
-    if (filePath.includes('/database/') ||
-        filePath.includes('/prisma/') ||
-        filePath.includes('/migrations/')) return 'database';
+    if (normalizedPath.includes('/controller/') || normalizedPath.includes('Controller.java')) return 'controller';
+    if (normalizedPath.includes('/service/') || normalizedPath.includes('Service.java')) return 'service';
+    if (normalizedPath.includes('/repository/') || normalizedPath.includes('Repository.java')) return 'repository';
+    if (normalizedPath.includes('/config/') || normalizedPath.includes('Config.java')) return 'config';
+    if (normalizedPath.includes('/test/') || normalizedPath.includes('Test.java')) return 'test';
 
     return 'other';
 }
 
 function shouldCheckErrorHandling(filePath: string): boolean {
-    // Skip test files, config files, and type definitions
-    if (filePath.match(/\.(test|spec)\.(ts|tsx)$/)) return false;
-    if (filePath.match(/\.(config|d)\.(ts|tsx)$/)) return false;
-    if (filePath.includes('types/')) return false;
-    if (filePath.includes('.styles.ts')) return false;
+    if (filePath.match(/Test\.java$/)) return false;
+    if (filePath.match(/Tests\.java$/)) return false;
+    if (filePath.includes('/test/')) return false;
 
-    // Check for code files
-    return filePath.match(/\.(ts|tsx|js|jsx)$/) !== null;
+    return filePath.match(/\.java$/) !== null;
 }
 
 function analyzeFileContent(filePath: string): {
-    hasTryCatch: boolean;
-    hasAsync: boolean;
-    hasPrisma: boolean;
+    hasLogging: boolean;
+    hasTransactional: boolean;
+    hasExceptionHandler: boolean;
     hasController: boolean;
-    hasApiCall: boolean;
+    hasService: boolean;
+    hasRepository: boolean;
 } {
     if (!existsSync(filePath)) {
-        return { hasTryCatch: false, hasAsync: false, hasPrisma: false, hasController: false, hasApiCall: false };
+        return { hasLogging: false, hasTransactional: false, hasExceptionHandler: false, hasController: false, hasService: false, hasRepository: false };
     }
 
     const content = readFileSync(filePath, 'utf-8');
 
     return {
-        hasTryCatch: /try\s*\{/.test(content),
-        hasAsync: /async\s+/.test(content),
-        hasPrisma: /prisma\.|PrismaService|findMany|findUnique|create\(|update\(|delete\(/i.test(content),
-        hasController: /export class.*Controller|router\.|app\.(get|post|put|delete|patch)/.test(content),
-        hasApiCall: /fetch\(|axios\.|apiClient\./i.test(content),
+        hasLogging: /@Slf4j|private.*Logger|LoggerFactory/.test(content),
+        hasTransactional: /@Transactional/.test(content),
+        hasExceptionHandler: /@ExceptionHandler|@ControllerAdvice/.test(content),
+        hasController: /@RestController|@Controller/.test(content),
+        hasService: /@Service/.test(content),
+        hasRepository: /@Repository|JpaRepository|CrudRepository/.test(content),
     };
 }
 
@@ -85,7 +71,7 @@ async function main() {
         const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
         // Check for edited files tracking
-        const cacheDir = join(process.env.HOME || '/root', '.claude', 'tsc-cache', session_id);
+        const cacheDir = join(homedir(), '.claude', 'tsc-cache', session_id);
         const trackingFile = join(cacheDir, 'edited-files.log');
 
         if (!existsSync(trackingFile)) {
@@ -110,9 +96,11 @@ async function main() {
 
         // Categorize files
         const categories = {
-            backend: [] as string[],
-            frontend: [] as string[],
-            database: [] as string[],
+            controller: [] as string[],
+            service: [] as string[],
+            repository: [] as string[],
+            config: [] as string[],
+            test: [] as string[],
             other: [] as string[],
         };
 
@@ -132,84 +120,77 @@ async function main() {
             analysisResults.push({ path: file.path, category, analysis });
         }
 
-        // Check if any code that needs error handling was written
+        // Check if any Spring Boot code was written
         const needsAttention = analysisResults.some(
             ({ analysis }) =>
-                analysis.hasTryCatch ||
-                analysis.hasAsync ||
-                analysis.hasPrisma ||
                 analysis.hasController ||
-                analysis.hasApiCall
+                analysis.hasService ||
+                analysis.hasRepository
         );
 
         if (!needsAttention) {
-            // No risky code patterns detected, skip reminder
             process.exit(0);
         }
 
         // Display reminder
         console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📋 ERROR HANDLING SELF-CHECK');
+        console.log('SPRING BOOT ERROR HANDLING CHECK');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-        // Backend reminders
-        if (categories.backend.length > 0) {
-            const backendFiles = analysisResults.filter(f => f.category === 'backend');
-            const hasTryCatch = backendFiles.some(f => f.analysis.hasTryCatch);
-            const hasPrisma = backendFiles.some(f => f.analysis.hasPrisma);
-            const hasController = backendFiles.some(f => f.analysis.hasController);
+        // Controller reminders
+        if (categories.controller.length > 0) {
+            const controllerFiles = analysisResults.filter(f => f.category === 'controller');
+            const hasLogging = controllerFiles.some(f => f.analysis.hasLogging);
+            const hasExceptionHandler = controllerFiles.some(f => f.analysis.hasExceptionHandler);
 
-            console.log('⚠️  Backend Changes Detected');
-            console.log(`   ${categories.backend.length} file(s) edited\n`);
+            console.log('Controller Changes Detected');
+            console.log(`   ${categories.controller.length} file(s) edited\n`);
 
-            if (hasTryCatch) {
-                console.log('   ❓ Did you add Sentry.captureException() in catch blocks?');
+            if (!hasLogging) {
+                console.log('   ? Consider adding @Slf4j for logging');
             }
-            if (hasPrisma) {
-                console.log('   ❓ Are Prisma operations wrapped in error handling?');
-            }
-            if (hasController) {
-                console.log('   ❓ Do controllers use BaseController.handleError()?');
+            if (!hasExceptionHandler) {
+                console.log('   ? Is there a @ControllerAdvice for exception handling?');
             }
 
-            console.log('\n   💡 Backend Best Practice:');
-            console.log('      - All errors should be captured to Sentry');
-            console.log('      - Use appropriate error helpers for context');
-            console.log('      - Controllers should extend BaseController\n');
+            console.log('\n   Best Practices:');
+            console.log('      - Use @Slf4j for logging');
+            console.log('      - Return proper ResponseEntity with status codes');
+            console.log('      - Use @Valid for request validation\n');
         }
 
-        // Frontend reminders
-        if (categories.frontend.length > 0) {
-            const frontendFiles = analysisResults.filter(f => f.category === 'frontend');
-            const hasApiCall = frontendFiles.some(f => f.analysis.hasApiCall);
-            const hasTryCatch = frontendFiles.some(f => f.analysis.hasTryCatch);
+        // Service reminders
+        if (categories.service.length > 0) {
+            const serviceFiles = analysisResults.filter(f => f.category === 'service');
+            const hasTransactional = serviceFiles.some(f => f.analysis.hasTransactional);
+            const hasLogging = serviceFiles.some(f => f.analysis.hasLogging);
 
-            console.log('💡 Frontend Changes Detected');
-            console.log(`   ${categories.frontend.length} file(s) edited\n`);
+            console.log('Service Changes Detected');
+            console.log(`   ${categories.service.length} file(s) edited\n`);
 
-            if (hasApiCall) {
-                console.log('   ❓ Do API calls show user-friendly error messages?');
+            if (!hasTransactional) {
+                console.log('   ? Consider @Transactional for database operations');
             }
-            if (hasTryCatch) {
-                console.log('   ❓ Are errors displayed to the user?');
+            if (!hasLogging) {
+                console.log('   ? Consider adding @Slf4j for logging');
             }
 
-            console.log('\n   💡 Frontend Best Practice:');
-            console.log('      - Use your notification system for user feedback');
-            console.log('      - Error boundaries for component errors');
-            console.log('      - Display user-friendly error messages\n');
+            console.log('\n   Best Practices:');
+            console.log('      - Use @Transactional for write operations');
+            console.log('      - Throw custom exceptions, not generic ones');
+            console.log('      - Log important business events\n');
         }
 
-        // Database reminders
-        if (categories.database.length > 0) {
-            console.log('🗄️  Database Changes Detected');
-            console.log(`   ${categories.database.length} file(s) edited\n`);
-            console.log('   ❓ Did you verify column names against schema?');
-            console.log('   ❓ Are migrations tested?\n');
+        // Repository reminders
+        if (categories.repository.length > 0) {
+            console.log('Repository Changes Detected');
+            console.log(`   ${categories.repository.length} file(s) edited\n`);
+            console.log('   ? Verify query methods follow naming conventions');
+            console.log('   ? Consider using @Query for complex queries\n');
         }
 
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('💡 TIP: Disable with SKIP_ERROR_REMINDER=1');
+        console.log('TIP: Disable with SKIP_ERROR_REMINDER=1');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
         process.exit(0);

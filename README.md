@@ -1,8 +1,8 @@
 # Claude Code Infrastructure Showcase
 
-**A curated reference library of production-tested Claude Code infrastructure.**
+**A curated reference library of production-tested Claude Code infrastructure for Spring Boot 3.x development.**
 
-Born from 6 months of real-world use managing a complex TypeScript microservices project, this showcase provides the patterns and systems that solved the "skills don't activate automatically" problem and scaled Claude Code for enterprise development.
+Born from 6 months of real-world use managing complex enterprise Java projects, this showcase provides the patterns and systems that solved the "skills don't activate automatically" problem and scaled Claude Code for Spring Boot development.
 
 > **This is NOT a working application** - it's a reference library. Copy what you need into your own projects.
 
@@ -11,11 +11,11 @@ Born from 6 months of real-world use managing a complex TypeScript microservices
 ## What's Inside
 
 **Production-tested infrastructure for:**
-- ✅ **Auto-activating skills** via hooks
-- ✅ **Modular skill pattern** (500-line rule with progressive disclosure)
-- ✅ **Specialized agents** for complex tasks
-- ✅ **Dev docs system** that survives context resets
-- ✅ **Comprehensive examples** using generic blog domain
+- Auto-activating skills via hooks
+- Modular skill pattern (500-line rule with progressive disclosure)
+- Specialized agents for complex tasks
+- Dev docs system that survives context resets
+- Comprehensive examples using Spring Boot 3.x patterns
 
 **Time investment to build:** 6 months of iteration
 **Time to integrate into your project:** 15-30 minutes
@@ -24,44 +24,43 @@ Born from 6 months of real-world use managing a complex TypeScript microservices
 
 ## Quick Start - Pick Your Path
 
-### 🤖 Using Claude Code to Integrate?
+### Using Claude Code to Integrate?
 
 **Claude:** Read [`CLAUDE_INTEGRATION_GUIDE.md`](CLAUDE_INTEGRATION_GUIDE.md) for step-by-step integration instructions tailored for AI-assisted setup.
 
-### 🎯 I want skill auto-activation
+### I want skill auto-activation
 
 **The breakthrough feature:** Skills that actually activate when you need them.
 
 **What you need:**
-1. The skill-activation hooks (2 files)
+1. The skill-activation hook (1 essential file)
 2. A skill or two relevant to your work
 3. 15 minutes
 
-**👉 [Setup Guide: .claude/hooks/README.md](.claude/hooks/README.md)**
+**[Setup Guide: .claude/hooks/README.md](.claude/hooks/README.md)**
 
-### 📚 I want to add ONE skill
+### I want to add ONE skill
 
 Browse the [skills catalog](.claude/skills/) and copy what you need.
 
 **Available:**
-- **backend-dev-guidelines** - Node.js/Express/TypeScript patterns
-- **frontend-dev-guidelines** - React/TypeScript/MUI v7 patterns
+- **backend-dev-guidelines** - Spring Boot 3.x/Lombok/JPA patterns
 - **skill-developer** - Meta-skill for creating skills
-- **route-tester** - Test authenticated API routes
-- **error-tracking** - Sentry integration patterns
+- **route-tester** - Test REST endpoints with MockMvc/TestContainers
+- **error-tracking** - Logging and exception handling patterns
 
-**👉 [Skills Guide: .claude/skills/README.md](.claude/skills/README.md)**
+**[Skills Guide: .claude/skills/README.md](.claude/skills/README.md)**
 
-### 🤖 I want specialized agents
+### I want specialized agents
 
-10 production-tested agents for complex tasks:
+9 production-tested agents for complex tasks:
 - Code architecture review
 - Refactoring assistance
 - Documentation generation
 - Error debugging
 - And more...
 
-**👉 [Agents Guide: .claude/agents/README.md](.claude/agents/README.md)**
+**[Agents Guide: .claude/agents/README.md](.claude/agents/README.md)**
 
 ---
 
@@ -82,11 +81,11 @@ Browse the [skills catalog](.claude/skills/) and copy what you need.
 ### Production-Tested Patterns
 
 These aren't theoretical examples - they're extracted from:
-- ✅ 6 microservices in production
-- ✅ 50,000+ lines of TypeScript
-- ✅ React frontend with complex data grids
-- ✅ Sophisticated workflow engine
-- ✅ 6 months of daily Claude Code use
+- Spring Boot 3.x microservices in production
+- Enterprise Java applications with Spring Security
+- JPA/Hibernate data access patterns
+- TestContainers integration testing
+- 6 months of daily Claude Code use
 
 The patterns work because they solved real problems.
 
@@ -111,23 +110,20 @@ skill-name/
 
 ```
 .claude/
-├── skills/                 # 5 production skills
-│   ├── backend-dev-guidelines/  (12 resource files)
-│   ├── frontend-dev-guidelines/ (11 resource files)
+├── skills/                 # 4 production skills
+│   ├── backend-dev-guidelines/  (11 resource files)
 │   ├── skill-developer/         (7 resource files)
 │   ├── route-tester/
 │   ├── error-tracking/
 │   └── skill-rules.json    # Skill activation configuration
-├── hooks/                  # 6 hooks for automation
-│   ├── skill-activation-prompt.*  (ESSENTIAL)
-│   ├── post-tool-use-tracker.sh   (ESSENTIAL)
-│   ├── tsc-check.sh        (optional, needs customization)
-│   └── trigger-build-resolver.sh  (optional)
-├── agents/                 # 10 specialized agents
+├── hooks/                  # 2 TypeScript hooks (cross-platform)
+│   ├── skill-activation-prompt.ts   (ESSENTIAL)
+│   └── error-handling-reminder.ts   (optional)
+├── agents/                 # 9 specialized agents
 │   ├── code-architecture-reviewer.md
 │   ├── refactor-planner.md
-│   ├── frontend-error-fixer.md
-│   └── ... 7 more
+│   ├── auto-error-resolver.md
+│   └── ... 6 more
 └── commands/               # 3 slash commands
     ├── dev-docs.md
     └── ...
@@ -141,36 +137,31 @@ dev/
 
 ## Component Catalog
 
-### 🎨 Skills (5)
+### Skills (4)
 
 | Skill | Lines | Purpose | Best For |
 |-------|-------|---------|----------|
-| [**skill-developer**](.claude/skills/skill-developer/) | 426 | Creating and managing skills | Meta-development |
-| [**backend-dev-guidelines**](.claude/skills/backend-dev-guidelines/) | 304 | Express/Prisma/Sentry patterns | Backend APIs |
-| [**frontend-dev-guidelines**](.claude/skills/frontend-dev-guidelines/) | 398 | React/MUI v7/TypeScript | React frontends |
-| [**route-tester**](.claude/skills/route-tester/) | 389 | Testing authenticated routes | API testing |
-| [**error-tracking**](.claude/skills/error-tracking/) | ~250 | Sentry integration | Error monitoring |
+| [**skill-developer**](.claude/skills/skill-developer/) | ~400 | Creating and managing skills | Meta-development |
+| [**backend-dev-guidelines**](.claude/skills/backend-dev-guidelines/) | ~500 | Spring Boot/JPA/Lombok patterns | Backend APIs |
+| [**route-tester**](.claude/skills/route-tester/) | ~300 | Testing REST endpoints | API testing |
+| [**error-tracking**](.claude/skills/error-tracking/) | ~250 | Logging and exception handling | Error monitoring |
 
 **All skills follow the modular pattern** - main file + resource files for progressive disclosure.
 
-**👉 [How to integrate skills →](.claude/skills/README.md)**
+**[How to integrate skills](.claude/skills/README.md)**
 
-### 🪝 Hooks (6)
+### Hooks (2)
 
 | Hook | Type | Essential? | Customization |
 |------|------|-----------|---------------|
-| skill-activation-prompt | UserPromptSubmit | ✅ YES | ✅ None needed |
-| post-tool-use-tracker | PostToolUse | ✅ YES | ✅ None needed |
-| tsc-check | Stop | ⚠️ Optional | ⚠️ Heavy - monorepo only |
-| trigger-build-resolver | Stop | ⚠️ Optional | ⚠️ Heavy - monorepo only |
-| error-handling-reminder | Stop | ⚠️ Optional | ⚠️ Moderate |
-| stop-build-check-enhanced | Stop | ⚠️ Optional | ⚠️ Moderate |
+| skill-activation-prompt | UserPromptSubmit | YES | None needed |
+| error-handling-reminder | Stop | Optional | Moderate |
 
-**Start with the two essential hooks** - they enable skill auto-activation and work out of the box.
+**Start with the essential hook** - skill-activation-prompt enables auto-activation and works out of the box.
 
-**👉 [Hook setup guide →](.claude/hooks/README.md)**
+**[Hook setup guide](.claude/hooks/README.md)**
 
-### 🤖 Agents (10)
+### Agents (9)
 
 **Standalone - just copy and use!**
 
@@ -179,17 +170,16 @@ dev/
 | code-architecture-reviewer | Review code for architectural consistency |
 | code-refactor-master | Plan and execute refactoring |
 | documentation-architect | Generate comprehensive documentation |
-| frontend-error-fixer | Debug frontend errors |
 | plan-reviewer | Review development plans |
 | refactor-planner | Create refactoring strategies |
 | web-research-specialist | Research technical issues online |
 | auth-route-tester | Test authenticated endpoints |
 | auth-route-debugger | Debug auth issues |
-| auto-error-resolver | Auto-fix TypeScript errors |
+| auto-error-resolver | Auto-fix Java compilation errors |
 
-**👉 [How agents work →](.claude/agents/README.md)**
+**[How agents work](.claude/agents/README.md)**
 
-### 💬 Slash Commands (3)
+### Slash Commands (3)
 
 | Command | Purpose |
 |---------|---------|
@@ -220,7 +210,7 @@ dev/
 - Resource files <500 lines each (deep dives)
 - Claude loads incrementally as needed
 
-**Example:** backend-dev-guidelines has 12 resource files covering routing, controllers, services, repositories, testing, etc.
+**Example:** backend-dev-guidelines has 11 resource files covering controllers, services, repositories, DTOs, JPA patterns, security, testing, and more.
 
 ### Dev Docs Pattern
 
@@ -235,12 +225,12 @@ dev/
 
 ---
 
-## ⚠️ Important: What Won't Work As-Is
+## Important: What Won't Work As-Is
 
 ### settings.json
 The included `settings.json` is an **example only**:
-- Stop hooks reference specific monorepo structure
-- Service names (blog-api, etc.) are examples
+- Stop hooks reference specific project structure
+- Service names are examples
 - MCP servers may not exist in your setup
 
 **To use it:**
@@ -254,22 +244,16 @@ Skills use generic blog examples (Post/Comment/User):
 - Patterns work for any domain (e-commerce, SaaS, etc.)
 - Adapt the patterns to your business logic
 
-### Hook Directory Structures
-Some hooks expect specific structures:
-- `tsc-check.sh` expects service directories
-- Customize based on YOUR project layout
-
 ---
 
 ## Integration Workflow
 
 **Recommended approach:**
 
-### Phase 1: Skill Activation (15 min)
-1. Copy skill-activation-prompt hook
-2. Copy post-tool-use-tracker hook
-3. Update settings.json
-4. Install hook dependencies
+### Phase 1: Skill Activation (10 min)
+1. Copy skill-activation-prompt.ts hook
+2. Update settings.json with hook configuration
+3. Run `npm install` in .claude/hooks directory
 
 ### Phase 2: Add First Skill (10 min)
 1. Pick ONE relevant skill
@@ -310,21 +294,21 @@ When helping users integrate:
 
 ### Before This Infrastructure
 
-❌ Skills don't activate automatically
-❌ Have to remember which skill to use
-❌ Large skills hit context limits
-❌ Context resets lose project knowledge
-❌ No consistency across development
-❌ Manual agent invocation every time
+- Skills don't activate automatically
+- Have to remember which skill to use
+- Large skills hit context limits
+- Context resets lose project knowledge
+- No consistency across development
+- Manual agent invocation every time
 
 ### After This Infrastructure
 
-✅ Skills suggest themselves based on context
-✅ Hooks trigger skills at the right time
-✅ Modular skills stay under context limits
-✅ Dev docs preserve knowledge across resets
-✅ Consistent patterns via guardrails
-✅ Agents streamline complex tasks
+- Skills suggest themselves based on context
+- Hooks trigger skills at the right time
+- Modular skills stay under context limits
+- Dev docs preserve knowledge across resets
+- Consistent patterns via guardrails
+- Agents streamline complex tasks
 
 ---
 
@@ -332,14 +316,13 @@ When helping users integrate:
 
 **Found this useful?**
 
-- ⭐ Star this repo
-- 🐛 Report issues or suggest improvements
-- 💬 Share your own skills/hooks/agents
-- 📝 Contribute examples from your domain
+- Star this repo
+- Report issues or suggest improvements
+- Share your own skills/hooks/agents
+- Contribute examples from your domain
 
 **Background:**
-This infrastructure was detailed in a post I made to Reddit ["Claude Code is a Beast – Tips from 6 Months of Hardcore Use"](https://www.reddit.com/r/ClaudeAI/comments/1oivjvm/claude_code_is_a_beast_tips_from_6_months_of/). After hundreds of requests, this showcase was created to help the community implement these patterns.
-
+This infrastructure was detailed in a post I made to Reddit ["Claude Code is a Beast - Tips from 6 Months of Hardcore Use"](https://www.reddit.com/r/ClaudeAI/comments/1oivjvm/claude_code_is_a_beast_tips_from_6_months_of/). After hundreds of requests, this showcase was created to help the community implement these patterns.
 
 ---
 
@@ -351,10 +334,10 @@ MIT License - Use freely in your projects, commercial or personal.
 
 ## Quick Links
 
-- 📖 [Claude Integration Guide](CLAUDE_INTEGRATION_GUIDE.md) - For AI-assisted setup
-- 🎨 [Skills Documentation](.claude/skills/README.md)
-- 🪝 [Hooks Setup](.claude/hooks/README.md)
-- 🤖 [Agents Guide](.claude/agents/README.md)
-- 📝 [Dev Docs Pattern](dev/README.md)
+- [Claude Integration Guide](CLAUDE_INTEGRATION_GUIDE.md) - For AI-assisted setup
+- [Skills Documentation](.claude/skills/README.md)
+- [Hooks Setup](.claude/hooks/README.md)
+- [Agents Guide](.claude/agents/README.md)
+- [Dev Docs Pattern](dev/README.md)
 
-**Start here:** Copy the two essential hooks, add one skill, and see the auto-activation magic happen.
+**Start here:** Copy the essential hook, add one skill, and see the auto-activation magic happen.

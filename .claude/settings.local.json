@@ -1,8 +1,21 @@
 {
   "permissions": {
     "allow": [
-      "Bash(for file in /root/git/claude-code-infrastructure-showcase/.claude/skills/frontend-dev-guidelines/resources/*.md)",
-      "Bash(done)"
+      "Bash(Select-Object FullName)",
+      "Bash(dir \"C:\\StancalauRo\\claude-code-infrastructure-showcase\\.claude\" /B)",
+      "Bash(dir \"C:\\StancalauRo\\claude-code-infrastructure-showcase\" /B)",
+      "Bash(Remove-Item \"C:\\StancalauRo\\claude-code-infrastructure-showcase\\.claude\\skills\\backend-dev-guidelines\\resources\\async-and-errors.md\" -Force)",
+      "Bash(Remove-Item \"C:\\StancalauRo\\claude-code-infrastructure-showcase\\.claude\\skills\\backend-dev-guidelines\\resources\\middleware-guide.md\" -Force)",
+      "Bash(Remove-Item \"C:\\StancalauRo\\claude-code-infrastructure-showcase\\.claude\\skills\\backend-dev-guidelines\\resources\\routing-and-controllers.md\" -Force)",
+      "Bash(Remove-Item \"C:\\StancalauRo\\claude-code-infrastructure-showcase\\.claude\\skills\\backend-dev-guidelines\\resources\\sentry-and-monitoring.md\" -Force)",
+      "Bash(Remove-Item \"C:\\StancalauRo\\claude-code-infrastructure-showcase\\.claude\\skills\\backend-dev-guidelines\\resources\\database-patterns.md\" -Force)",
+      "Bash(Remove-Item \"C:\\StancalauRo\\claude-code-infrastructure-showcase\\.claude\\skills\\backend-dev-guidelines\\resources\\validation-patterns.md\" -Force)",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell:*)",
+      "Bash(dir:*)",
+      "Bash(npm install)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

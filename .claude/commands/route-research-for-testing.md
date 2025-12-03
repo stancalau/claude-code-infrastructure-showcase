@@ -1,5 +1,5 @@
 ---
-description: Map edited routes & launch tests
+description: Map edited controllers & launch tests
 argument-hint: "[/extra/path …]"
 allowed-tools: Bash(cat:*), Bash(awk:*), Bash(grep:*), Bash(sort:*), Bash(xargs:*), Bash(sed:*)
 model: sonnet
@@ -7,30 +7,30 @@ model: sonnet
 
 ## Context
 
-Changed route files this session (auto-generated):
+Changed controller files this session (auto-generated):
 
-!cat "$CLAUDE_PROJECT_DIR/.claude/tsc-cache"/\*/edited-files.log \
+!cat "$CLAUDE_PROJECT_DIR/.claude/build-cache"/\*/edited-files.log \
  | awk -F: '{print $2}' \
- | grep '/routes/' \
+ | grep -E '(Controller|Resource)\.java' \
  | sort -u
 
-User-specified additional routes: `$ARGUMENTS`
+User-specified additional controllers: `$ARGUMENTS`
 
 ## Your task
 
 Follow the numbered steps **exactly**:
 
-1. Combine the auto list with `$ARGUMENTS`, dedupe, and resolve any prefixes
-   defined in `src/app.ts`.
-2. For each final route, output a JSON record with the path, method, expected
-   request/response shapes, and valid + invalid payload examples.
+1. Combine the auto list with `$ARGUMENTS`, dedupe, and identify the REST endpoints
+   by examining @RequestMapping, @GetMapping, @PostMapping, etc.
+2. For each endpoint, output a JSON record with the path, method, expected
+   request/response shapes (from DTOs), and valid + invalid payload examples.
 3. **Now call the `Task` tool** using:
 
 ```json
 {
     "tool": "Task",
     "parameters": {
-        "description": "route smoke tests",
+        "description": "endpoint smoke tests",
         "prompt": "Run the auth-route-tester sub-agent on the JSON above."
     }
 }

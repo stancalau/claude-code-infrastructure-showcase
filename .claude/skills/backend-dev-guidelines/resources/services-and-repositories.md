@@ -1,16 +1,15 @@
 # Services and Repositories - Business Logic Layer
 
-Complete guide to organizing business logic with services and data access with repositories.
+Complete guide to organizing business logic with services and data access with Spring Data JPA repositories.
 
 ## Table of Contents
 
 - [Service Layer Overview](#service-layer-overview)
-- [Dependency Injection Pattern](#dependency-injection-pattern)
-- [Singleton Pattern](#singleton-pattern)
+- [Spring Dependency Injection](#spring-dependency-injection)
+- [Transaction Management](#transaction-management)
 - [Repository Pattern](#repository-pattern)
 - [Service Design Principles](#service-design-principles)
 - [Caching Strategies](#caching-strategies)
-- [Testing Services](#testing-services)
 
 ---
 
@@ -21,8 +20,8 @@ Complete guide to organizing business logic with services and data access with r
 **Services contain business logic** - the 'what' and 'why' of your application:
 
 ```
-Controller asks: "Should I do this?"
-Service answers: "Yes/No, here's why, and here's what happens"
+Controller asks: "Create this user"
+Service answers: "Let me validate, create, and return the result"
 Repository executes: "Here's the data you requested"
 ```
 
@@ -32,518 +31,214 @@ Repository executes: "Here's the data you requested"
 - ✅ Transaction management
 - ✅ Complex calculations
 - ✅ External service integration
-- ✅ Business validations
+- ✅ DTO ↔ Entity mapping
 
 **Services should NOT:**
-- ❌ Know about HTTP (Request/Response)
-- ❌ Direct Prisma access (use repositories)
-- ❌ Handle route-specific logic
-- ❌ Format HTTP responses
+- ❌ Know about HTTP (`HttpServletRequest`, `ResponseEntity`)
+- ❌ Handle controller-specific concerns
+- ❌ Manage security context directly (use `@PreAuthorize`)
 
 ---
 
-## Dependency Injection Pattern
+## Spring Dependency Injection
 
-### Why Dependency Injection?
+### Constructor Injection with Lombok
+
+```java
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class UserServiceImpl implements UserService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
+
+    @Override
+    @Transactional
+    public UserResponse create(CreateUserRequest request) {
+        log.info("Creating user with email: {}", request.email());
+
+        if (userRepository.existsByEmail(request.email())) {
+            throw new ConflictException("Email already exists");
+        }
+
+        User user = User.builder()
+            .email(request.email())
+            .name(request.name())
+            .password(passwordEncoder.encode(request.password()))
+            .status(UserStatus.ACTIVE)
+            .build();
+
+        User saved = userRepository.save(user);
+        return userMapper.toResponse(saved);
+    }
+}
+```
+
+**Key Points:**
+- `@RequiredArgsConstructor` generates constructor for `final` fields
+- Dependencies are injected via constructor (testable)
+- `@Slf4j` adds logging capability
+- `@Transactional` manages database transactions
+
+### Service Interface Pattern
+
+```java
+public interface UserService {
+    UserResponse create(CreateUserRequest request);
+    UserResponse findById(Long id);
+    Page<UserResponse> findAll(Pageable pageable);
+    UserResponse update(Long id, UpdateUserRequest request);
+    void delete(Long id);
+}
+```
 
 **Benefits:**
-- Easy to test (inject mocks)
-- Clear dependencies
-- Flexible configuration
-- Promotes loose coupling
-
-### Excellent Example: NotificationService
-
-**File:** `/blog-api/src/services/NotificationService.ts`
-
-```typescript
-// Define dependencies interface for clarity
-export interface NotificationServiceDependencies {
-    prisma: PrismaClient;
-    batchingService: BatchingService;
-    emailComposer: EmailComposer;
-}
-
-// Service with dependency injection
-export class NotificationService {
-    private prisma: PrismaClient;
-    private batchingService: BatchingService;
-    private emailComposer: EmailComposer;
-    private preferencesCache: Map<string, { preferences: UserPreference; timestamp: number }> = new Map();
-    private CACHE_TTL = (notificationConfig.preferenceCacheTTLMinutes || 5) * 60 * 1000;
-
-    // Dependencies injected via constructor
-    constructor(dependencies: NotificationServiceDependencies) {
-        this.prisma = dependencies.prisma;
-        this.batchingService = dependencies.batchingService;
-        this.emailComposer = dependencies.emailComposer;
-    }
-
-    /**
-     * Create a notification and route it appropriately
-     */
-    async createNotification(params: CreateNotificationParams) {
-        const { recipientID, type, title, message, link, context = {}, channel = 'both', priority = NotificationPriority.NORMAL } = params;
-
-        try {
-            // Get template and render content
-            const template = getNotificationTemplate(type);
-            const rendered = renderNotificationContent(template, context);
-
-            // Create in-app notification record
-            const notificationId = await createNotificationRecord({
-                instanceId: parseInt(context.instanceId || '0', 10),
-                template: type,
-                recipientUserId: recipientID,
-                channel: channel === 'email' ? 'email' : 'inApp',
-                contextData: context,
-                title: finalTitle,
-                message: finalMessage,
-                link: finalLink,
-            });
-
-            // Route notification based on channel
-            if (channel === 'email' || channel === 'both') {
-                await this.routeNotification({
-                    notificationId,
-                    userId: recipientID,
-                    type,
-                    priority,
-                    title: finalTitle,
-                    message: finalMessage,
-                    link: finalLink,
-                    context,
-                });
-            }
-
-            return notification;
-        } catch (error) {
-            ErrorLogger.log(error, {
-                context: {
-                    '[NotificationService] createNotification': {
-                        type: params.type,
-                        recipientID: params.recipientID,
-                    },
-                },
-            });
-            throw error;
-        }
-    }
-
-    /**
-     * Route notification based on user preferences
-     */
-    private async routeNotification(params: { notificationId: number; userId: string; type: string; priority: NotificationPriority; title: string; message: string; link?: string; context?: Record<string, any> }) {
-        // Get user preferences with caching
-        const preferences = await this.getUserPreferences(params.userId);
-
-        // Check if we should batch or send immediately
-        if (this.shouldBatchEmail(preferences, params.type, params.priority)) {
-            await this.batchingService.queueNotificationForBatch({
-                notificationId: params.notificationId,
-                userId: params.userId,
-                userPreference: preferences,
-                priority: params.priority,
-            });
-        } else {
-            // Send immediately via EmailComposer
-            await this.sendImmediateEmail({
-                userId: params.userId,
-                title: params.title,
-                message: params.message,
-                link: params.link,
-                context: params.context,
-                type: params.type,
-            });
-        }
-    }
-
-    /**
-     * Determine if email should be batched
-     */
-    shouldBatchEmail(preferences: UserPreference, notificationType: string, priority: NotificationPriority): boolean {
-        // HIGH priority always immediate
-        if (priority === NotificationPriority.HIGH) {
-            return false;
-        }
-
-        // Check batch mode
-        const batchMode = preferences.emailBatchMode || BatchMode.IMMEDIATE;
-        return batchMode !== BatchMode.IMMEDIATE;
-    }
-
-    /**
-     * Get user preferences with caching
-     */
-    async getUserPreferences(userId: string): Promise<UserPreference> {
-        // Check cache first
-        const cached = this.preferencesCache.get(userId);
-        if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-            return cached.preferences;
-        }
-
-        const preference = await this.prisma.userPreference.findUnique({
-            where: { userID: userId },
-        });
-
-        const finalPreferences = preference || DEFAULT_PREFERENCES;
-
-        // Update cache
-        this.preferencesCache.set(userId, {
-            preferences: finalPreferences,
-            timestamp: Date.now(),
-        });
-
-        return finalPreferences;
-    }
-}
-```
-
-**Usage in Controller:**
-
-```typescript
-// Instantiate with dependencies
-const notificationService = new NotificationService({
-    prisma: PrismaService.main,
-    batchingService: new BatchingService(PrismaService.main),
-    emailComposer: new EmailComposer(),
-});
-
-// Use in controller
-const notification = await notificationService.createNotification({
-    recipientID: 'user-123',
-    type: 'AFRLWorkflowNotification',
-    context: { workflowName: 'AFRL Monthly Report' },
-});
-```
-
-**Key Takeaways:**
-- Dependencies passed via constructor
-- Clear interface defines required dependencies
-- Easy to test (inject mocks)
-- Encapsulated caching logic
-- Business rules isolated from HTTP
+- Clear contract
+- Easy to mock in tests
+- Allows multiple implementations
 
 ---
 
-## Singleton Pattern
+## Transaction Management
 
-### When to Use Singletons
+### `@Transactional` Basics
 
-**Use for:**
-- Services with expensive initialization
-- Services with shared state (caching)
-- Services accessed from many places
-- Permission services
-- Configuration services
+```java
+@Service
+@RequiredArgsConstructor
+public class OrderServiceImpl implements OrderService {
 
-### Example: PermissionService (Singleton)
+    private final OrderRepository orderRepository;
+    private final InventoryService inventoryService;
+    private final PaymentService paymentService;
 
-**File:** `/blog-api/src/services/permissionService.ts`
+    @Override
+    @Transactional
+    public OrderResponse placeOrder(CreateOrderRequest request) {
+        Order order = createOrder(request);
 
-```typescript
-import { PrismaClient } from '@prisma/client';
+        inventoryService.reserveItems(order.getItems());
 
-class PermissionService {
-    private static instance: PermissionService;
-    private prisma: PrismaClient;
-    private permissionCache: Map<string, { canAccess: boolean; timestamp: number }> = new Map();
-    private CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+        paymentService.processPayment(order);
 
-    // Private constructor prevents direct instantiation
-    private constructor() {
-        this.prisma = PrismaService.main;
+        return orderMapper.toResponse(orderRepository.save(order));
     }
 
-    // Get singleton instance
-    public static getInstance(): PermissionService {
-        if (!PermissionService.instance) {
-            PermissionService.instance = new PermissionService();
-        }
-        return PermissionService.instance;
+    @Override
+    @Transactional(readOnly = true)
+    public OrderResponse findById(Long id) {
+        return orderRepository.findById(id)
+            .map(orderMapper::toResponse)
+            .orElseThrow(() -> new ResourceNotFoundException("Order", id));
     }
+}
+```
 
-    /**
-     * Check if user can complete a workflow step
-     */
-    async canCompleteStep(userId: string, stepInstanceId: number): Promise<boolean> {
-        const cacheKey = `${userId}:${stepInstanceId}`;
+### Transaction Best Practices
 
-        // Check cache
-        const cached = this.permissionCache.get(cacheKey);
-        if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-            return cached.canAccess;
-        }
-
-        try {
-            const post = await this.prisma.post.findUnique({
-                where: { id: postId },
-                include: {
-                    author: true,
-                    comments: {
-                        include: {
-                            user: true,
-                        },
-                    },
-                },
-            });
-
-            if (!post) {
-                return false;
-            }
-
-            // Check if user has permission
-            const canEdit = post.authorId === userId ||
-                await this.isUserAdmin(userId);
-
-            // Cache result
-            this.permissionCache.set(cacheKey, {
-                canAccess: isAssigned,
-                timestamp: Date.now(),
-            });
-
-            return isAssigned;
-        } catch (error) {
-            console.error('[PermissionService] Error checking step permission:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Clear cache for user
-     */
-    clearUserCache(userId: string): void {
-        for (const [key] of this.permissionCache) {
-            if (key.startsWith(`${userId}:`)) {
-                this.permissionCache.delete(key);
-            }
-        }
-    }
-
-    /**
-     * Clear all cache
-     */
-    clearCache(): void {
-        this.permissionCache.clear();
+```java
+@Transactional
+public void updateWithRollback(Long id, UpdateRequest request) {
+    try {
+        performUpdate(id, request);
+        externalService.notify(id);
+    } catch (ExternalServiceException e) {
+        log.error("External service failed, but transaction will commit", e);
     }
 }
 
-// Export singleton instance
-export const permissionService = PermissionService.getInstance();
-```
+@Transactional(rollbackFor = Exception.class)
+public void updateWithFullRollback(Long id, UpdateRequest request) {
+    performUpdate(id, request);
+    externalService.notify(id);
+}
 
-**Usage:**
-
-```typescript
-import { permissionService } from '../services/permissionService';
-
-// Use anywhere in the codebase
-const canComplete = await permissionService.canCompleteStep(userId, stepId);
-
-if (!canComplete) {
-    throw new ForbiddenError('You do not have permission to complete this step');
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void auditLog(String action, Long entityId) {
+    auditRepository.save(new AuditLog(action, entityId));
 }
 ```
+
+**Transaction Annotations:**
+
+| Annotation | Use Case |
+|------------|----------|
+| `@Transactional` | Write operations |
+| `@Transactional(readOnly = true)` | Read-only queries (performance) |
+| `@Transactional(rollbackFor = Exception.class)` | Rollback on checked exceptions |
+| `@Transactional(propagation = REQUIRES_NEW)` | Independent transaction |
 
 ---
 
 ## Repository Pattern
 
-### Purpose of Repositories
+### Spring Data JPA Repositories
 
-**Repositories abstract data access** - the 'how' of data operations:
+```java
+public interface UserRepository extends JpaRepository<User, Long> {
 
-```
-Service: "Get me all active users sorted by name"
-Repository: "Here's the Prisma query that does that"
-```
+    Optional<User> findByEmail(String email);
 
-**Repositories are responsible for:**
-- ✅ All Prisma operations
-- ✅ Query construction
-- ✅ Query optimization (select, include)
-- ✅ Database error handling
-- ✅ Caching database results
+    boolean existsByEmail(String email);
 
-**Repositories should NOT:**
-- ❌ Contain business logic
-- ❌ Know about HTTP
-- ❌ Make decisions (that's service layer)
+    List<User> findByStatus(UserStatus status);
 
-### Repository Template
+    @Query("SELECT u FROM User u WHERE u.department.id = :deptId")
+    List<User> findByDepartmentId(@Param("deptId") Long departmentId);
 
-```typescript
-// repositories/UserRepository.ts
-import { PrismaService } from '@project-lifecycle-portal/database';
-import type { User, Prisma } from '@project-lifecycle-portal/database';
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles WHERE u.id = :id")
+    Optional<User> findByIdWithRoles(@Param("id") Long id);
 
-export class UserRepository {
-    /**
-     * Find user by ID with optimized query
-     */
-    async findById(userId: string): Promise<User | null> {
-        try {
-            return await PrismaService.main.user.findUnique({
-                where: { userID: userId },
-                select: {
-                    userID: true,
-                    email: true,
-                    name: true,
-                    isActive: true,
-                    roles: true,
-                    createdAt: true,
-                    updatedAt: true,
-                },
-            });
-        } catch (error) {
-            console.error('[UserRepository] Error finding user by ID:', error);
-            throw new Error(`Failed to find user: ${userId}`);
-        }
-    }
+    @Modifying
+    @Query("UPDATE User u SET u.status = :status WHERE u.id = :id")
+    int updateStatus(@Param("id") Long id, @Param("status") UserStatus status);
 
-    /**
-     * Find all active users
-     */
-    async findActive(options?: { orderBy?: Prisma.UserOrderByWithRelationInput }): Promise<User[]> {
-        try {
-            return await PrismaService.main.user.findMany({
-                where: { isActive: true },
-                orderBy: options?.orderBy || { name: 'asc' },
-                select: {
-                    userID: true,
-                    email: true,
-                    name: true,
-                    roles: true,
-                },
-            });
-        } catch (error) {
-            console.error('[UserRepository] Error finding active users:', error);
-            throw new Error('Failed to find active users');
-        }
-    }
-
-    /**
-     * Find user by email
-     */
-    async findByEmail(email: string): Promise<User | null> {
-        try {
-            return await PrismaService.main.user.findUnique({
-                where: { email },
-            });
-        } catch (error) {
-            console.error('[UserRepository] Error finding user by email:', error);
-            throw new Error(`Failed to find user with email: ${email}`);
-        }
-    }
-
-    /**
-     * Create new user
-     */
-    async create(data: Prisma.UserCreateInput): Promise<User> {
-        try {
-            return await PrismaService.main.user.create({ data });
-        } catch (error) {
-            console.error('[UserRepository] Error creating user:', error);
-            throw new Error('Failed to create user');
-        }
-    }
-
-    /**
-     * Update user
-     */
-    async update(userId: string, data: Prisma.UserUpdateInput): Promise<User> {
-        try {
-            return await PrismaService.main.user.update({
-                where: { userID: userId },
-                data,
-            });
-        } catch (error) {
-            console.error('[UserRepository] Error updating user:', error);
-            throw new Error(`Failed to update user: ${userId}`);
-        }
-    }
-
-    /**
-     * Delete user (soft delete by setting isActive = false)
-     */
-    async delete(userId: string): Promise<User> {
-        try {
-            return await PrismaService.main.user.update({
-                where: { userID: userId },
-                data: { isActive: false },
-            });
-        } catch (error) {
-            console.error('[UserRepository] Error deleting user:', error);
-            throw new Error(`Failed to delete user: ${userId}`);
-        }
-    }
-
-    /**
-     * Check if email exists
-     */
-    async emailExists(email: string): Promise<boolean> {
-        try {
-            const count = await PrismaService.main.user.count({
-                where: { email },
-            });
-            return count > 0;
-        } catch (error) {
-            console.error('[UserRepository] Error checking email exists:', error);
-            throw new Error('Failed to check if email exists');
-        }
-    }
+    Page<User> findByStatusAndCreatedAtAfter(
+        UserStatus status,
+        LocalDateTime createdAt,
+        Pageable pageable
+    );
 }
-
-// Export singleton instance
-export const userRepository = new UserRepository();
 ```
 
-**Using Repository in Service:**
+### Query Methods Naming Convention
 
-```typescript
-// services/userService.ts
-import { userRepository } from '../repositories/UserRepository';
-import { ConflictError, NotFoundError } from '../utils/errors';
+| Method Name | Generated Query |
+|-------------|-----------------|
+| `findByEmail` | `WHERE email = ?` |
+| `findByStatusAndRole` | `WHERE status = ? AND role = ?` |
+| `findByNameContaining` | `WHERE name LIKE %?%` |
+| `findByCreatedAtBetween` | `WHERE created_at BETWEEN ? AND ?` |
+| `findByAgeGreaterThan` | `WHERE age > ?` |
+| `countByStatus` | `SELECT COUNT(*) WHERE status = ?` |
+| `existsByEmail` | `SELECT 1 WHERE email = ? LIMIT 1` |
+| `deleteByStatus` | `DELETE WHERE status = ?` |
 
-export class UserService {
-    /**
-     * Create new user with business rules
-     */
-    async createUser(data: { email: string; name: string; roles: string[] }): Promise<User> {
-        // Business rule: Check if email already exists
-        const emailExists = await userRepository.emailExists(data.email);
-        if (emailExists) {
-            throw new ConflictError('Email already exists');
-        }
+### Avoiding N+1 Queries
 
-        // Business rule: Validate roles
-        const validRoles = ['admin', 'operations', 'user'];
-        const invalidRoles = data.roles.filter((role) => !validRoles.includes(role));
-        if (invalidRoles.length > 0) {
-            throw new ValidationError(`Invalid roles: ${invalidRoles.join(', ')}`);
-        }
+```java
+public interface PostRepository extends JpaRepository<Post, Long> {
 
-        // Create user via repository
-        return await userRepository.create({
-            email: data.email,
-            name: data.name,
-            roles: data.roles,
-            isActive: true,
-        });
-    }
+    @EntityGraph(attributePaths = {"author", "comments"})
+    Optional<Post> findWithDetailsById(Long id);
 
-    /**
-     * Get user by ID
-     */
-    async getUser(userId: string): Promise<User> {
-        const user = await userRepository.findById(userId);
+    @Query("""
+        SELECT p FROM Post p
+        LEFT JOIN FETCH p.author
+        LEFT JOIN FETCH p.comments c
+        LEFT JOIN FETCH c.author
+        WHERE p.id = :id
+        """)
+    Optional<Post> findByIdWithAllDetails(@Param("id") Long id);
 
-        if (!user) {
-            throw new NotFoundError(`User not found: ${userId}`);
-        }
-
-        return user;
-    }
+    @Query("""
+        SELECT DISTINCT p FROM Post p
+        LEFT JOIN FETCH p.tags
+        WHERE p.status = :status
+        """)
+    List<Post> findByStatusWithTags(@Param("status") PostStatus status);
 }
 ```
 
@@ -553,112 +248,100 @@ export class UserService {
 
 ### 1. Single Responsibility
 
-Each service should have ONE clear purpose:
-
-```typescript
-// ✅ GOOD - Single responsibility
-class UserService {
-    async createUser() {}
-    async updateUser() {}
-    async deleteUser() {}
+```java
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
 }
 
-class EmailService {
-    async sendEmail() {}
-    async sendBulkEmails() {}
+@Service
+@RequiredArgsConstructor
+public class EmailServiceImpl implements EmailService {
+    private final JavaMailSender mailSender;
+    private final TemplateEngine templateEngine;
 }
 
-// ❌ BAD - Too many responsibilities
-class UserService {
-    async createUser() {}
-    async sendWelcomeEmail() {}  // Should be EmailService
-    async logUserActivity() {}   // Should be AuditService
-    async processPayment() {}    // Should be PaymentService
+@Service
+@RequiredArgsConstructor
+public class AuditServiceImpl implements AuditService {
+    private final AuditLogRepository auditLogRepository;
 }
 ```
 
 ### 2. Clear Method Names
 
-Method names should describe WHAT they do:
-
-```typescript
-// ✅ GOOD - Clear intent
-async createNotification()
-async getUserPreferences()
-async shouldBatchEmail()
-async routeNotification()
-
-// ❌ BAD - Vague or misleading
-async process()
-async handle()
-async doIt()
-async execute()
-```
-
-### 3. Return Types
-
-Always use explicit return types:
-
-```typescript
-// ✅ GOOD - Explicit types
-async createUser(data: CreateUserDTO): Promise<User> {}
-async findUsers(): Promise<User[]> {}
-async deleteUser(id: string): Promise<void> {}
-
-// ❌ BAD - Implicit any
-async createUser(data) {}  // No types!
-```
-
-### 4. Error Handling
-
-Services should throw meaningful errors:
-
-```typescript
-// ✅ GOOD - Meaningful errors
-if (!user) {
-    throw new NotFoundError(`User not found: ${userId}`);
-}
-
-if (emailExists) {
-    throw new ConflictError('Email already exists');
-}
-
-// ❌ BAD - Generic errors
-if (!user) {
-    throw new Error('Error');  // What error?
+```java
+public interface UserService {
+    UserResponse create(CreateUserRequest request);
+    UserResponse findById(Long id);
+    Page<UserResponse> search(UserSearchCriteria criteria, Pageable pageable);
+    void activate(Long id);
+    void deactivate(Long id);
+    void changePassword(Long id, ChangePasswordRequest request);
 }
 ```
 
-### 5. Avoid God Services
+### 3. Proper Exception Handling
 
-Don't create services that do everything:
+```java
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
 
-```typescript
-// ❌ BAD - God service
-class WorkflowService {
-    async startWorkflow() {}
-    async completeStep() {}
-    async assignRoles() {}
-    async sendNotifications() {}  // Should be NotificationService
-    async validatePermissions() {}  // Should be PermissionService
-    async logAuditTrail() {}  // Should be AuditService
-    // ... 50 more methods
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse findById(Long id) {
+        return userRepository.findById(id)
+            .map(userMapper::toResponse)
+            .orElseThrow(() -> new ResourceNotFoundException("User", id));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse create(CreateUserRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new ConflictException("User with email already exists: " + request.email());
+        }
+
+        User user = userMapper.toEntity(request);
+        return userMapper.toResponse(userRepository.save(user));
+    }
 }
+```
 
-// ✅ GOOD - Focused services
-class WorkflowService {
-    constructor(
-        private notificationService: NotificationService,
-        private permissionService: PermissionService,
-        private auditService: AuditService
-    ) {}
+### 4. Service Orchestration
 
-    async startWorkflow() {
-        // Orchestrate other services
-        await this.permissionService.checkPermission();
-        await this.workflowRepository.create();
-        await this.notificationService.notify();
-        await this.auditService.log();
+```java
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class OrderServiceImpl implements OrderService {
+
+    private final OrderRepository orderRepository;
+    private final InventoryService inventoryService;
+    private final PaymentService paymentService;
+    private final NotificationService notificationService;
+    private final OrderMapper orderMapper;
+
+    @Override
+    @Transactional
+    public OrderResponse placeOrder(CreateOrderRequest request) {
+        log.info("Placing order for user: {}", request.userId());
+
+        Order order = orderMapper.toEntity(request);
+
+        inventoryService.validateAndReserve(order.getItems());
+
+        PaymentResult payment = paymentService.process(order.getTotalAmount());
+        order.setPaymentId(payment.transactionId());
+
+        Order saved = orderRepository.save(order);
+
+        notificationService.sendOrderConfirmation(saved);
+
+        return orderMapper.toResponse(saved);
     }
 }
 ```
@@ -667,123 +350,78 @@ class WorkflowService {
 
 ## Caching Strategies
 
-### 1. In-Memory Caching
+### Spring Cache Abstraction
 
-```typescript
-class UserService {
-    private cache: Map<string, { user: User; timestamp: number }> = new Map();
-    private CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+```java
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class UserServiceImpl implements UserService {
 
-    async getUser(userId: string): Promise<User> {
-        // Check cache
-        const cached = this.cache.get(userId);
-        if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-            return cached.user;
-        }
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
-        // Fetch from database
-        const user = await userRepository.findById(userId);
-
-        // Update cache
-        if (user) {
-            this.cache.set(userId, { user, timestamp: Date.now() });
-        }
-
-        return user;
+    @Override
+    @Cacheable(value = "users", key = "#id")
+    @Transactional(readOnly = true)
+    public UserResponse findById(Long id) {
+        log.info("Fetching user from database: {}", id);
+        return userRepository.findById(id)
+            .map(userMapper::toResponse)
+            .orElseThrow(() -> new ResourceNotFoundException("User", id));
     }
 
-    clearUserCache(userId: string): void {
-        this.cache.delete(userId);
+    @Override
+    @CacheEvict(value = "users", key = "#id")
+    @Transactional
+    public UserResponse update(Long id, UpdateUserRequest request) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        userMapper.updateEntity(user, request);
+        return userMapper.toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @CacheEvict(value = "users", key = "#id")
+    @Transactional
+    public void delete(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new ResourceNotFoundException("User", id);
+        }
+        userRepository.deleteById(id);
+    }
+
+    @CacheEvict(value = "users", allEntries = true)
+    public void clearCache() {
+        log.info("Clearing user cache");
     }
 }
 ```
 
-### 2. Cache Invalidation
+### Cache Configuration
 
-```typescript
-class UserService {
-    async updateUser(userId: string, data: UpdateUserDTO): Promise<User> {
-        // Update in database
-        const user = await userRepository.update(userId, data);
+```java
+@Configuration
+@EnableCaching
+public class CacheConfig {
 
-        // Invalidate cache
-        this.clearUserCache(userId);
-
-        return user;
+    @Bean
+    public CacheManager cacheManager() {
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager();
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+            .maximumSize(1000)
+            .expireAfterWrite(Duration.ofMinutes(10))
+            .recordStats());
+        return cacheManager;
     }
 }
-```
-
----
-
-## Testing Services
-
-### Unit Tests
-
-```typescript
-// tests/userService.test.ts
-import { UserService } from '../services/userService';
-import { userRepository } from '../repositories/UserRepository';
-import { ConflictError } from '../utils/errors';
-
-// Mock repository
-jest.mock('../repositories/UserRepository');
-
-describe('UserService', () => {
-    let userService: UserService;
-
-    beforeEach(() => {
-        userService = new UserService();
-        jest.clearAllMocks();
-    });
-
-    describe('createUser', () => {
-        it('should create user when email does not exist', async () => {
-            // Arrange
-            const userData = {
-                email: 'test@example.com',
-                name: 'Test User',
-                roles: ['user'],
-            };
-
-            (userRepository.emailExists as jest.Mock).mockResolvedValue(false);
-            (userRepository.create as jest.Mock).mockResolvedValue({
-                userID: '123',
-                ...userData,
-            });
-
-            // Act
-            const user = await userService.createUser(userData);
-
-            // Assert
-            expect(user).toBeDefined();
-            expect(user.email).toBe(userData.email);
-            expect(userRepository.emailExists).toHaveBeenCalledWith(userData.email);
-            expect(userRepository.create).toHaveBeenCalled();
-        });
-
-        it('should throw ConflictError when email exists', async () => {
-            // Arrange
-            const userData = {
-                email: 'existing@example.com',
-                name: 'Test User',
-                roles: ['user'],
-            };
-
-            (userRepository.emailExists as jest.Mock).mockResolvedValue(true);
-
-            // Act & Assert
-            await expect(userService.createUser(userData)).rejects.toThrow(ConflictError);
-            expect(userRepository.create).not.toHaveBeenCalled();
-        });
-    });
-});
 ```
 
 ---
 
 **Related Files:**
-- [SKILL.md](SKILL.md) - Main guide
-- [routing-and-controllers.md](routing-and-controllers.md) - Controllers that use services
-- [database-patterns.md](database-patterns.md) - Prisma and repository patterns
-- [complete-examples.md](complete-examples.md) - Full service/repository examples
+- [SKILL.md](../SKILL.md) - Main guide
+- [controllers-and-endpoints.md](controllers-and-endpoints.md) - Controllers that use services
+- [jpa-patterns.md](jpa-patterns.md) - JPA entity patterns
+- [testing-guide.md](testing-guide.md) - Testing services

@@ -23,7 +23,7 @@ Skills are modular knowledge bases that Claude loads when needed. They provide:
 ### skill-developer (Meta-Skill)
 **Purpose:** Creating and managing Claude Code skills
 
-**Files:** 7 resource files (426 lines total)
+**Files:** 7 resource files
 
 **Use when:**
 - Creating new skills
@@ -31,137 +31,95 @@ Skills are modular knowledge bases that Claude loads when needed. They provide:
 - Working with skill-rules.json
 - Debugging skill activation
 
-**Customization:** ✅ None - copy as-is
+**Customization:** None - copy as-is
 
-**[View Skill →](skill-developer/)**
+**[View Skill](skill-developer/)**
 
 ---
 
 ### backend-dev-guidelines
-**Purpose:** Node.js/Express/TypeScript development patterns
+**Purpose:** Spring Boot 3.x development patterns with Lombok and JPA
 
-**Files:** 12 resource files (304 lines main + resources)
+**Files:** 11 resource files
 
 **Covers:**
-- Layered architecture (Routes → Controllers → Services → Repositories)
-- BaseController pattern
-- Prisma database access
-- Sentry error tracking
-- Zod validation
-- UnifiedConfig pattern
-- Dependency injection
-- Testing strategies
+- Layered architecture (Controller → Service → Repository)
+- Spring Data JPA with optimized queries
+- Bean Validation (Jakarta Validation)
+- Spring Security with JWT
+- Exception handling with @ControllerAdvice
+- Lombok best practices
+- TestContainers integration testing
+- Configuration with @ConfigurationProperties
 
 **Use when:**
-- Creating/modifying API routes
+- Creating/modifying REST endpoints
 - Building controllers or services
-- Database operations with Prisma
-- Setting up error tracking
+- Database operations with JPA
+- Setting up security
 
-**Customization:** ⚠️ Update `pathPatterns` in skill-rules.json to match your backend directories
-
-**Example pathPatterns:**
-```json
-{
-  "pathPatterns": [
-    "src/api/**/*.ts",       // Single app with src/api
-    "backend/**/*.ts",       // Backend directory
-    "services/*/src/**/*.ts" // Multi-service monorepo
-  ]
-}
-```
-
-**[View Skill →](backend-dev-guidelines/)**
-
----
-
-### frontend-dev-guidelines
-**Purpose:** React/TypeScript/MUI v7 development patterns
-
-**Files:** 11 resource files (398 lines main + resources)
-
-**Covers:**
-- Modern React patterns (Suspense, lazy loading)
-- useSuspenseQuery for data fetching
-- MUI v7 styling (Grid with `size={{}}` prop)
-- TanStack Router
-- File organization (features/ pattern)
-- Performance optimization
-- TypeScript best practices
-
-**Use when:**
-- Creating React components
-- Fetching data with TanStack Query
-- Styling with MUI v7
-- Setting up routing
-
-**Customization:** ⚠️ Update `pathPatterns` + verify you use React/MUI
+**Customization:** Update `pathPatterns` in skill-rules.json to match your Java directories
 
 **Example pathPatterns:**
 ```json
 {
   "pathPatterns": [
-    "src/**/*.tsx",          // Single React app
-    "frontend/src/**/*.tsx", // Frontend directory
-    "apps/web/**/*.tsx"      // Monorepo web app
+    "src/main/java/**/*.java",
+    "*/src/main/java/**/*.java",
+    "**/controller/**/*.java",
+    "**/service/**/*.java"
   ]
 }
 ```
 
-**Note:** This skill is configured as a **guardrail** (enforcement: "block") to prevent MUI v6→v7 incompatibilities.
-
-**[View Skill →](frontend-dev-guidelines/)**
+**[View Skill](backend-dev-guidelines/)**
 
 ---
 
 ### route-tester
-**Purpose:** Testing authenticated API routes with JWT cookie auth
+**Purpose:** Testing REST endpoints with MockMvc and TestContainers
 
-**Files:** 1 main file (389 lines)
+**Files:** 1 main file
 
 **Covers:**
-- JWT cookie-based authentication testing
-- test-auth-route.js script patterns
-- cURL with cookie authentication
-- Debugging auth issues
-- Testing POST/PUT/DELETE operations
+- MockMvc unit testing
+- TestContainers integration testing
+- @WebMvcTest patterns
+- Authentication testing with @WithMockUser
+- Response validation with jsonPath
 
 **Use when:**
 - Testing API endpoints
-- Debugging authentication
-- Validating route functionality
+- Writing controller tests
+- Validating request/response handling
 
-**Customization:** ⚠️ Requires JWT cookie auth setup
+**Customization:** Customize for your test patterns
 
-**Ask first:** "Do you use JWT cookie-based authentication?"
-- If YES: Copy and customize service URLs
-- If NO: Skip or adapt for your auth method
-
-**[View Skill →](route-tester/)**
+**[View Skill](route-tester/)**
 
 ---
 
 ### error-tracking
-**Purpose:** Sentry error tracking and monitoring patterns
+**Purpose:** Logging and exception handling patterns
 
-**Files:** 1 main file (~250 lines)
+**Files:** 1 main file
 
 **Covers:**
-- Sentry v8 initialization
-- Error capture patterns
-- Breadcrumbs and user context
-- Performance monitoring
-- Integration with Express and React
+- SLF4J/Logback logging
+- @RestControllerAdvice for global exception handling
+- Custom exceptions (ResourceNotFoundException, etc.)
+- Error response format
+- Spring Actuator health checks
 
 **Use when:**
-- Setting up error tracking
-- Capturing exceptions
-- Adding error context
+- Setting up logging
+- Creating exception handlers
+- Adding health checks
 - Debugging production issues
 
-**Customization:** ⚠️ Update `pathPatterns` for your backend
+**Customization:** Update `pathPatterns` for your project
 
-**[View Skill →](error-tracking/)**
+**[View Skill](error-tracking/)**
 
 ---
 
@@ -185,16 +143,16 @@ See [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md) for complet
 ### Manual Integration
 
 **Step 1: Copy the skill directory**
-```bash
-cp -r claude-code-infrastructure-showcase/.claude/skills/backend-dev-guidelines \\
+```powershell
+Copy-Item -Recurse claude-code-infrastructure-showcase/.claude/skills/backend-dev-guidelines `
       your-project/.claude/skills/
 ```
 
 **Step 2: Update skill-rules.json**
 
 If you don't have one, create it:
-```bash
-cp claude-code-infrastructure-showcase/.claude/skills/skill-rules.json \\
+```powershell
+Copy-Item claude-code-infrastructure-showcase/.claude/skills/skill-rules.json `
    your-project/.claude/skills/
 ```
 
@@ -205,7 +163,7 @@ Then customize the `pathPatterns` for your project:
     "backend-dev-guidelines": {
       "fileTriggers": {
         "pathPatterns": [
-          "YOUR_BACKEND_PATH/**/*.ts"  // ← Update this!
+          "src/main/java/**/*.java"
         ]
       }
     }
@@ -214,7 +172,7 @@ Then customize the `pathPatterns` for your project:
 ```
 
 **Step 3: Test**
-- Edit a file in your backend directory
+- Edit a Java file in your source directory
 - The skill should activate automatically
 
 ---
@@ -224,10 +182,10 @@ Then customize the `pathPatterns` for your project:
 ### What It Does
 
 Defines when skills should activate based on:
-- **Keywords** in user prompts ("backend", "API", "route")
+- **Keywords** in user prompts ("controller", "service", "repository")
 - **Intent patterns** (regex matching user intent)
-- **File path patterns** (editing backend files)
-- **Content patterns** (code contains Prisma queries)
+- **File path patterns** (editing Java files)
+- **Content patterns** (code contains @RestController)
 
 ### Configuration Format
 
@@ -242,8 +200,8 @@ Defines when skills should activate based on:
       "intentPatterns": ["regex patterns"]
     },
     "fileTriggers": {
-      "pathPatterns": ["path/to/files/**/*.ts"],
-      "contentPatterns": ["import.*Prisma"]
+      "pathPatterns": ["src/main/java/**/*.java"],
+      "contentPatterns": ["@RestController"]
     }
   }
 }
@@ -255,7 +213,7 @@ Defines when skills should activate based on:
 - **block**: Must use skill before proceeding (guardrail)
 
 **Use "block" for:**
-- Preventing breaking changes (MUI v6→v7)
+- Preventing breaking changes
 - Critical database operations
 - Security-sensitive code
 
@@ -311,18 +269,15 @@ description: What this skill does
 5. Is settings.json configured correctly?
 
 **Debug:**
-```bash
+```powershell
 # Check skill exists
-ls -la .claude/skills/
+Get-ChildItem .claude/skills/
 
 # Validate skill-rules.json
-cat .claude/skills/skill-rules.json | jq .
+Get-Content .claude/skills/skill-rules.json | ConvertFrom-Json
 
-# Check hooks are executable
-ls -la .claude/hooks/*.sh
-
-# Test hook manually
-./.claude/hooks/skill-activation-prompt.sh
+# Check hooks exist
+Get-ChildItem .claude/hooks/*.sh
 ```
 
 ### Skill activates too often
@@ -352,8 +307,8 @@ Update skill-rules.json:
 5. Test activation after integration
 
 **Common mistakes:**
-- Keeping example paths (blog-api/, frontend/)
-- Not asking about monorepo vs single-app
+- Keeping example paths
+- Not asking about multi-module vs single-module
 - Copying skill-rules.json without customization
 
 ---

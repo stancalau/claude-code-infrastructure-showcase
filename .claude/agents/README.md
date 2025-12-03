@@ -1,6 +1,6 @@
 # Agents
 
-Specialized agents for complex, multi-step tasks.
+Specialized agents for complex, multi-step tasks in Spring Boot development.
 
 ---
 
@@ -16,18 +16,18 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 
 ---
 
-## Available Agents (10)
+## Available Agents (9)
 
 ### code-architecture-reviewer
 **Purpose:** Review code for architectural consistency and best practices
 
 **When to use:**
-- After implementing a new feature
+- After implementing a new Spring Boot feature
 - Before merging significant changes
 - When refactoring code
 - To validate architectural decisions
 
-**Integration:** ✅ Copy as-is
+**Integration:** Copy as-is
 
 ---
 
@@ -35,12 +35,12 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 **Purpose:** Plan and execute comprehensive refactoring
 
 **When to use:**
-- Reorganizing file structures
-- Breaking down large components
+- Reorganizing package structures
+- Breaking down large services
 - Updating import paths after moves
 - Improving code maintainability
 
-**Integration:** ✅ Copy as-is
+**Integration:** Copy as-is
 
 ---
 
@@ -53,20 +53,7 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 - Writing developer guides
 - Generating architectural overviews
 
-**Integration:** ✅ Copy as-is
-
----
-
-### frontend-error-fixer
-**Purpose:** Debug and fix frontend errors
-
-**When to use:**
-- Browser console errors
-- TypeScript compilation errors in frontend
-- React errors
-- Build failures
-
-**Integration:** ⚠️ May reference screenshot paths - update if needed
+**Integration:** Copy as-is
 
 ---
 
@@ -79,7 +66,7 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 - Identifying potential issues early
 - Getting second opinion on approach
 
-**Integration:** ✅ Copy as-is
+**Integration:** Copy as-is
 
 ---
 
@@ -92,7 +79,7 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 - Breaking down large files
 - Improving code structure
 
-**Integration:** ✅ Copy as-is
+**Integration:** Copy as-is
 
 ---
 
@@ -105,7 +92,7 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 - Researching best practices
 - Comparing implementation approaches
 
-**Integration:** ✅ Copy as-is
+**Integration:** Copy as-is
 
 ---
 
@@ -113,11 +100,11 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 **Purpose:** Test authenticated API endpoints
 
 **When to use:**
-- Testing routes with JWT cookie auth
+- Testing routes with JWT authentication
 - Validating endpoint functionality
 - Debugging authentication issues
 
-**Integration:** ⚠️ Requires JWT cookie-based auth
+**Integration:** Requires JWT-based auth setup
 
 ---
 
@@ -127,22 +114,22 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 **When to use:**
 - Auth failures
 - Token issues
-- Cookie problems
+- Spring Security problems
 - Permission errors
 
-**Integration:** ⚠️ Requires JWT cookie-based auth
+**Integration:** Requires JWT-based auth setup
 
 ---
 
 ### auto-error-resolver
-**Purpose:** Automatically fix TypeScript compilation errors
+**Purpose:** Automatically fix Java/Spring Boot compilation errors
 
 **When to use:**
-- Build failures with TypeScript errors
-- After refactoring that breaks types
+- Build failures with compilation errors
+- After refactoring that breaks code
 - Systematic error resolution needed
 
-**Integration:** ⚠️ May need path updates
+**Integration:** Works with Maven or Gradle projects
 
 ---
 
@@ -151,18 +138,12 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 ### Standard Integration (Most Agents)
 
 **Step 1: Copy the file**
-```bash
-cp showcase/.claude/agents/agent-name.md \\
+```powershell
+Copy-Item showcase/.claude/agents/agent-name.md `
    your-project/.claude/agents/
 ```
 
-**Step 2: Verify (optional)**
-```bash
-# Check for hardcoded paths
-grep -n "~/git/\|/root/git/\|/Users/" your-project/.claude/agents/agent-name.md
-```
-
-**Step 3: Use it**
+**Step 2: Use it**
 Ask Claude: "Use the [agent-name] agent to [task]"
 
 That's it! Agents work immediately.
@@ -171,19 +152,14 @@ That's it! Agents work immediately.
 
 ### Agents Requiring Customization
 
-**frontend-error-fixer:**
-- May reference screenshot paths
-- Ask user: "Where should screenshots be saved?"
-- Update paths in agent file
-
 **auth-route-tester / auth-route-debugger:**
-- Require JWT cookie authentication
+- Require Spring Security with JWT authentication
 - Update service URLs from examples
-- Customize for user's auth setup
+- Customize for your auth setup
 
 **auto-error-resolver:**
-- May have hardcoded project paths
-- Update to use `$CLAUDE_PROJECT_DIR` or relative paths
+- Works with Maven or Gradle
+- Update commands if using non-standard build setup
 
 ---
 
@@ -195,7 +171,7 @@ That's it! Agents work immediately.
 | Complex analysis needed | Checking best practices |
 | Autonomous work preferred | Want to maintain control |
 | Task has clear end goal | Ongoing development work |
-| Example: "Review all controllers" | Example: "Creating a new route" |
+| Example: "Review all controllers" | Example: "Creating a new endpoint" |
 
 **Both can work together:**
 - Skill provides patterns during development
@@ -207,16 +183,15 @@ That's it! Agents work immediately.
 
 | Agent | Complexity | Customization | Auth Required |
 |-------|-----------|---------------|---------------|
-| code-architecture-reviewer | Medium | ✅ None | No |
-| code-refactor-master | High | ✅ None | No |
-| documentation-architect | Medium | ✅ None | No |
-| frontend-error-fixer | Medium | ⚠️ Screenshot paths | No |
-| plan-reviewer | Low | ✅ None | No |
-| refactor-planner | Medium | ✅ None | No |
-| web-research-specialist | Low | ✅ None | No |
-| auth-route-tester | Medium | ⚠️ Auth setup | JWT cookies |
-| auth-route-debugger | Medium | ⚠️ Auth setup | JWT cookies |
-| auto-error-resolver | Low | ⚠️ Paths | No |
+| code-architecture-reviewer | Medium | None | No |
+| code-refactor-master | High | None | No |
+| documentation-architect | Medium | None | No |
+| plan-reviewer | Low | None | No |
+| refactor-planner | Medium | None | No |
+| web-research-specialist | Low | None | No |
+| auth-route-tester | Medium | Auth setup | JWT |
+| auth-route-debugger | Medium | Auth setup | JWT |
+| auto-error-resolver | Low | Build tool | No |
 
 ---
 
@@ -226,12 +201,8 @@ That's it! Agents work immediately.
 
 1. **Read [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)**
 2. **Just copy the .md file** - agents are standalone
-3. **Check for hardcoded paths:**
-   ```bash
-   grep "~/git/\|/root/" agent-name.md
-   ```
-4. **Update paths if found** to `$CLAUDE_PROJECT_DIR` or `.`
-5. **For auth agents:** Ask if they use JWT cookie auth first
+3. **For auth agents:** Ask if they use JWT authentication first
+4. **For auto-error-resolver:** Confirm Maven or Gradle project
 
 **That's it!** Agents are the easiest components to integrate.
 
@@ -242,7 +213,11 @@ That's it! Agents work immediately.
 Agents are markdown files with optional YAML frontmatter:
 
 ```markdown
-# Agent Name
+---
+name: agent-name
+description: Brief description
+tools: Read, Write, Edit, Bash
+---
 
 ## Purpose
 What this agent does
@@ -271,21 +246,15 @@ What format to return results in
 ### Agent not found
 
 **Check:**
-```bash
-# Is agent file present?
-ls -la .claude/agents/[agent-name].md
+```powershell
+Get-Item .claude/agents/[agent-name].md
 ```
 
 ### Agent fails with path errors
 
 **Check for hardcoded paths:**
-```bash
-grep "~/\|/root/\|/Users/" .claude/agents/[agent-name].md
-```
-
-**Fix:**
-```bash
-sed -i 's|~/git/.*project|$CLAUDE_PROJECT_DIR|g' .claude/agents/[agent-name].md
+```powershell
+Select-String -Path ".claude/agents/[agent-name].md" -Pattern "~/|/root/"
 ```
 
 ---

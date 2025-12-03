@@ -1,275 +1,239 @@
-# Configuration Management - UnifiedConfig Pattern
+# Configuration - Spring Boot Properties
 
-Complete guide to managing configuration in backend microservices.
+Complete guide to configuration management in Spring Boot applications.
 
 ## Table of Contents
 
-- [UnifiedConfig Overview](#unifiedconfig-overview)
-- [NEVER Use process.env Directly](#never-use-processenv-directly)
-- [Configuration Structure](#configuration-structure)
-- [Environment-Specific Configs](#environment-specific-configs)
-- [Secrets Management](#secrets-management)
-- [Migration Guide](#migration-guide)
+- [ConfigurationProperties](#configurationproperties)
+- [Application YAML](#application-yaml)
+- [Profiles](#profiles)
+- [Validation](#validation)
 
 ---
 
-## UnifiedConfig Overview
+## ConfigurationProperties
 
-### Why UnifiedConfig?
+### Record-Based Properties
 
-**Problems with process.env:**
-- ❌ No type safety
-- ❌ No validation
-- ❌ Hard to test
-- ❌ Scattered throughout code
-- ❌ No default values
-- ❌ Runtime errors for typos
+```java
+@ConfigurationProperties(prefix = "app")
+@Validated
+public record AppProperties(
+    @NotBlank String name,
+    @NotBlank String version,
+    JwtConfig jwt,
+    CorsConfig cors,
+    DatabaseConfig database
+) {
+    public record JwtConfig(
+        @NotBlank String secret,
+        @NotNull Duration accessTokenExpiration,
+        @NotNull Duration refreshTokenExpiration
+    ) {}
 
-**Benefits of unifiedConfig:**
-- ✅ Type-safe configuration
-- ✅ Single source of truth
-- ✅ Validated at startup
-- ✅ Easy to test with mocks
-- ✅ Clear structure
-- ✅ Fallback to environment variables
+    public record CorsConfig(
+        List<String> allowedOrigins,
+        List<String> allowedMethods,
+        boolean allowCredentials
+    ) {}
 
----
-
-## NEVER Use process.env Directly
-
-### The Rule
-
-```typescript
-// ❌ NEVER DO THIS
-const timeout = parseInt(process.env.TIMEOUT_MS || '5000');
-const dbHost = process.env.DB_HOST || 'localhost';
-
-// ✅ ALWAYS DO THIS
-import { config } from './config/unifiedConfig';
-const timeout = config.timeouts.default;
-const dbHost = config.database.host;
-```
-
-### Why This Matters
-
-**Example of problems:**
-```typescript
-// Typo in environment variable name
-const host = process.env.DB_HSOT; // undefined! No error!
-
-// Type safety
-const port = process.env.PORT; // string! Need parseInt
-const timeout = parseInt(process.env.TIMEOUT); // NaN if not set!
-```
-
-**With unifiedConfig:**
-```typescript
-const port = config.server.port; // number, guaranteed
-const timeout = config.timeouts.default; // number, with fallback
-```
-
----
-
-## Configuration Structure
-
-### UnifiedConfig Interface
-
-```typescript
-export interface UnifiedConfig {
-    database: {
-        host: string;
-        port: number;
-        username: string;
-        password: string;
-        database: string;
-    };
-    server: {
-        port: number;
-        sessionSecret: string;
-    };
-    tokens: {
-        jwt: string;
-        inactivity: string;
-        internal: string;
-    };
-    keycloak: {
-        realm: string;
-        client: string;
-        baseUrl: string;
-        secret: string;
-    };
-    aws: {
-        region: string;
-        emailQueueUrl: string;
-        accessKeyId: string;
-        secretAccessKey: string;
-    };
-    sentry: {
-        dsn: string;
-        environment: string;
-        tracesSampleRate: number;
-    };
-    // ... more sections
+    public record DatabaseConfig(
+        int poolSize,
+        Duration connectionTimeout
+    ) {}
 }
 ```
 
-### Implementation Pattern
+### Enable ConfigurationProperties
 
-**File:** `/blog-api/src/config/unifiedConfig.ts`
-
-```typescript
-import * as fs from 'fs';
-import * as path from 'path';
-import * as ini from 'ini';
-
-const configPath = path.join(__dirname, '../../config.ini');
-const iniConfig = ini.parse(fs.readFileSync(configPath, 'utf-8'));
-
-export const config: UnifiedConfig = {
-    database: {
-        host: iniConfig.database?.host || process.env.DB_HOST || 'localhost',
-        port: parseInt(iniConfig.database?.port || process.env.DB_PORT || '3306'),
-        username: iniConfig.database?.username || process.env.DB_USER || 'root',
-        password: iniConfig.database?.password || process.env.DB_PASSWORD || '',
-        database: iniConfig.database?.database || process.env.DB_NAME || 'blog_dev',
-    },
-    server: {
-        port: parseInt(iniConfig.server?.port || process.env.PORT || '3002'),
-        sessionSecret: iniConfig.server?.sessionSecret || process.env.SESSION_SECRET || 'dev-secret',
-    },
-    // ... more configuration
-};
-
-// Validate critical config
-if (!config.tokens.jwt) {
-    throw new Error('JWT secret not configured!');
+```java
+@SpringBootApplication
+@ConfigurationPropertiesScan
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
 }
 ```
 
-**Key Points:**
-- Read from config.ini first
-- Fallback to process.env
-- Default values for development
-- Validation at startup
-- Type-safe access
+### Usage
 
----
+```java
+@Service
+@RequiredArgsConstructor
+public class JwtService {
 
-## Environment-Specific Configs
+    private final AppProperties appProperties;
 
-### config.ini Structure
-
-```ini
-[database]
-host = localhost
-port = 3306
-username = root
-password = password1
-database = blog_dev
-
-[server]
-port = 3002
-sessionSecret = your-secret-here
-
-[tokens]
-jwt = your-jwt-secret
-inactivity = 30m
-internal = internal-api-token
-
-[keycloak]
-realm = myapp
-client = myapp-client
-baseUrl = http://localhost:8080
-secret = keycloak-client-secret
-
-[sentry]
-dsn = https://your-sentry-dsn
-environment = development
-tracesSampleRate = 0.1
-```
-
-### Environment Overrides
-
-```bash
-# .env file (optional overrides)
-DB_HOST=production-db.example.com
-DB_PASSWORD=secure-password
-PORT=80
-```
-
-**Precedence:**
-1. config.ini (highest priority)
-2. process.env variables
-3. Hard-coded defaults (lowest priority)
-
----
-
-## Secrets Management
-
-### DO NOT Commit Secrets
-
-```gitignore
-# .gitignore
-config.ini
-.env
-sentry.ini
-*.pem
-*.key
-```
-
-### Use Environment Variables in Production
-
-```typescript
-// Development: config.ini
-// Production: Environment variables
-
-export const config: UnifiedConfig = {
-    database: {
-        password: process.env.DB_PASSWORD || iniConfig.database?.password || '',
-    },
-    tokens: {
-        jwt: process.env.JWT_SECRET || iniConfig.tokens?.jwt || '',
-    },
-};
+    public String generateToken(UserDetails user) {
+        return Jwts.builder()
+            .expiration(Date.from(Instant.now()
+                .plus(appProperties.jwt().accessTokenExpiration())))
+            .signWith(getKey(appProperties.jwt().secret()))
+            .compact();
+    }
+}
 ```
 
 ---
 
-## Migration Guide
+## Application YAML
 
-### Find All process.env Usage
+### application.yml
 
-```bash
-grep -r "process.env" blog-api/src/ --include="*.ts" | wc -l
+```yaml
+spring:
+  application:
+    name: my-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mydb
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 100
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+app:
+  name: My Service
+  version: 1.0.0
+  jwt:
+    secret: ${JWT_SECRET:your-256-bit-secret-key-minimum-32-characters}
+    access-token-expiration: 15m
+    refresh-token-expiration: 7d
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+    allow-credentials: true
+
+logging:
+  level:
+    root: INFO
+    com.company.app: DEBUG
+    org.hibernate.SQL: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
 ```
 
-### Migration Example
+---
 
-**Before:**
-```typescript
-// Scattered throughout code
-const timeout = parseInt(process.env.OPENID_HTTP_TIMEOUT_MS || '15000');
-const keycloakUrl = process.env.KEYCLOAK_BASE_URL;
-const jwtSecret = process.env.JWT_SECRET;
+## Profiles
+
+### application-dev.yml
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mydb_dev
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+logging:
+  level:
+    com.company.app: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
 ```
 
-**After:**
-```typescript
-import { config } from './config/unifiedConfig';
+### application-prod.yml
 
-const timeout = config.keycloak.timeout;
-const keycloakUrl = config.keycloak.baseUrl;
-const jwtSecret = config.tokens.jwt;
+```yaml
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    hikari:
+      maximum-pool-size: 20
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+logging:
+  level:
+    root: WARN
+    com.company.app: INFO
 ```
 
-**Benefits:**
-- Type-safe
-- Centralized
-- Easy to test
-- Validated at startup
+### application-test.yml
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:15:///testdb
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+
+app:
+  jwt:
+    secret: test-secret-key-for-testing-purposes-only-min-32-chars
+```
+
+---
+
+## Validation
+
+### Validated Properties
+
+```java
+@ConfigurationProperties(prefix = "app")
+@Validated
+public record AppProperties(
+    @NotBlank(message = "App name is required")
+    String name,
+
+    @NotNull(message = "JWT config is required")
+    @Valid
+    JwtConfig jwt
+) {
+    public record JwtConfig(
+        @NotBlank(message = "JWT secret is required")
+        @Size(min = 32, message = "JWT secret must be at least 32 characters")
+        String secret,
+
+        @NotNull(message = "Access token expiration is required")
+        Duration accessTokenExpiration
+    ) {}
+}
+```
 
 ---
 
 **Related Files:**
-- [SKILL.md](SKILL.md)
-- [testing-guide.md](testing-guide.md)
+- [SKILL.md](../SKILL.md) - Main guide
+- [security-guide.md](security-guide.md) - Security configuration
+- [testing-guide.md](testing-guide.md) - Test configuration
