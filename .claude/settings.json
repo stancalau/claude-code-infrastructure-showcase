@@ -24,6 +24,14 @@
             "command": "npx tsx .claude/hooks/skill-activation-prompt.ts"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/request-clarity-check.ts"
+          }
+        ]
       }
     ],
     "Stop": [

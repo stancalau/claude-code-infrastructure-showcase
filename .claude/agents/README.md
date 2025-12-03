@@ -16,7 +16,7 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 
 ---
 
-## Available Agents (9)
+## Available Agents (10)
 
 ### code-architecture-reviewer
 **Purpose:** Review code for architectural consistency and best practices
@@ -67,6 +67,19 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 - Getting second opinion on approach
 
 **Integration:** Copy as-is
+
+---
+
+### request-analyzer
+**Purpose:** Analyze vague requests and generate clarifying questions
+
+**When to use:**
+- User request is vague or incomplete
+- Multiple interpretations possible
+- Critical details are missing
+- Scope is unclear
+
+**Integration:** Copy as-is + hook available
 
 ---
 
@@ -187,6 +200,7 @@ That's it! Agents work immediately.
 | code-refactor-master | High | None | No |
 | documentation-architect | Medium | None | No |
 | plan-reviewer | Low | None | No |
+| request-analyzer | Low | None | No |
 | refactor-planner | Medium | None | No |
 | web-research-specialist | Low | None | No |
 | auth-route-tester | Medium | Auth setup | JWT |
