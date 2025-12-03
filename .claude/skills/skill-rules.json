@@ -209,6 +209,57 @@
                 ]
             }
         },
+        "product-owner": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Product ownership patterns for feature definition, user stories, acceptance criteria, and task breakdown",
+            "promptTriggers": {
+                "keywords": [
+                    "product owner",
+                    "user story",
+                    "user stories",
+                    "acceptance criteria",
+                    "feature definition",
+                    "epic",
+                    "requirements",
+                    "task breakdown",
+                    "split task",
+                    "break down",
+                    "definition of done",
+                    "scope",
+                    "in scope",
+                    "out of scope",
+                    "given when then",
+                    "as a user",
+                    "so that",
+                    "feature spec",
+                    "feature documentation",
+                    "requirements doc",
+                    "story points",
+                    "sprint planning",
+                    "backlog"
+                ],
+                "intentPatterns": [
+                    "(define|create|write).*?(feature|requirement|story|epic)",
+                    "(break|split).*?(down|into|task|story)",
+                    "(acceptance|done).*?criteria",
+                    "(organize|structure).*?(feature|requirement).*?doc",
+                    "(plan|scope).*?(feature|epic|work)",
+                    "how (to|do I).*?(write|define).*?(story|requirement|feature)"
+                ]
+            },
+            "fileTriggers": {
+                "pathPatterns": [
+                    "**/docs/features/**/*.md",
+                    "**/documentation/features/**/*.md",
+                    "**/requirements/**/*.md",
+                    "**/*requirements*.md",
+                    "**/*stories*.md",
+                    "**/*epic*.md"
+                ]
+            }
+        },
         "thymeleaf-dev-guidelines": {
             "type": "domain",
             "enforcement": "suggest",
