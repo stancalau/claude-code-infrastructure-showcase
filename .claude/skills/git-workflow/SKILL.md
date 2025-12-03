@@ -76,12 +76,34 @@ git branch --show-current
 
 | Rule | Requirement |
 |------|-------------|
-| No emojis | Keep messages professional and searchable |
+| **NO EMOJIS** | Keep messages professional and searchable |
 | Max 50 chars | Subject line must be concise |
 | Imperative mood | "Add feature" not "Added feature" |
 | Focus on WHY | Explain the reason, not the code change |
 | No period | Don't end subject line with a period |
 | Capitalize | Start with capital letter |
+| **No Claude footer** | Do NOT add the default Claude Code footer |
+
+### CRITICAL: No Default Claude Code Footer
+
+**DO NOT USE** the standard Claude Code commit footer:
+```
+# WRONG - Never use this format
+feat: Add feature
+
+Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**CORRECT** - Simple, clean commit message:
+```
+feat: Add feature
+
+Optional body explaining WHY.
+```
+
+This project requires clean commit messages without emojis or AI attribution footers.
 
 ### Commit Types
 
