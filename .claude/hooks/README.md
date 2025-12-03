@@ -57,6 +57,28 @@ npm install
 
 **Why it's essential:** This is THE hook that makes skills auto-activate.
 
+### request-clarity-check (UserPromptSubmit)
+
+**Purpose:** Detects vague/incomplete requests and suggests clarifying questions
+
+**How it works:**
+1. Analyzes user prompt for vague patterns (e.g., "fix the bug", "add feature")
+2. Identifies request category (Bug Report, Feature Request, Refactoring, etc.)
+3. Suggests targeted clarifying questions
+4. Recommends using AskUserQuestion or request-analyzer agent
+
+**Detects:**
+- Vague bug reports without symptoms/reproduction steps
+- Feature requests without scope/details
+- Improvement requests without metrics/goals
+- Refactoring requests without boundaries
+
+**Excludes (no false positives):**
+- Questions (starts with what/how/why)
+- Specific file references (mentions .java, .ts, etc.)
+- Git commands (commit, push, merge)
+- Detailed requests with context indicators
+
 ### error-handling-reminder (Stop)
 
 **Purpose:** Reminds about Spring Boot best practices when Java files are edited
@@ -81,6 +103,14 @@ Add to `.claude/settings.json` - **same configuration works on all platforms:**
           {
             "type": "command",
             "command": "npx tsx .claude/hooks/skill-activation-prompt.ts"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/request-clarity-check.ts"
           }
         ]
       }
@@ -117,6 +147,14 @@ Add to `.claude/settings.json` - **same configuration works on all platforms:**
           {
             "type": "command",
             "command": "npx tsx .claude/hooks/skill-activation-prompt.ts"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/request-clarity-check.ts"
           }
         ]
       }
