@@ -208,6 +208,77 @@
                     "log\\.(error|warn|info)"
                 ]
             }
+        },
+        "thymeleaf-dev-guidelines": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Thymeleaf UI development patterns for Spring Boot 3.x with layouts, fragments, forms, and HTMX",
+            "promptTriggers": {
+                "keywords": [
+                    "thymeleaf",
+                    "template",
+                    "html template",
+                    "view",
+                    "layout",
+                    "fragment",
+                    "th:text",
+                    "th:each",
+                    "th:if",
+                    "th:href",
+                    "th:action",
+                    "th:field",
+                    "th:object",
+                    "form binding",
+                    "server-side rendering",
+                    "SSR",
+                    "HTMX",
+                    "partial update",
+                    "flash message",
+                    "i18n",
+                    "internationalization",
+                    "messages.properties",
+                    "error page",
+                    "custom error page",
+                    "navigation",
+                    "navbar",
+                    "Bootstrap",
+                    "WebJars"
+                ],
+                "intentPatterns": [
+                    "(create|add|implement|build).*?(template|page|view|form|layout|fragment)",
+                    "(fix|handle|debug).*?(template|thymeleaf|view|html)",
+                    "(add|implement).*?(form|validation|i18n|layout|fragment)",
+                    "(organize|structure).*?(template|view|page)",
+                    "(how to|best practice).*?(thymeleaf|template|form|layout|fragment)"
+                ]
+            },
+            "fileTriggers": {
+                "pathPatterns": [
+                    "**/templates/**/*.html",
+                    "**/templates/*.html",
+                    "**/resources/templates/**",
+                    "**/static/css/**",
+                    "**/static/js/**",
+                    "**/messages*.properties",
+                    "**/ValidationMessages*.properties"
+                ],
+                "contentPatterns": [
+                    "xmlns:th=\"http://www.thymeleaf.org\"",
+                    "th:text",
+                    "th:each",
+                    "th:if",
+                    "th:replace",
+                    "th:fragment",
+                    "th:field",
+                    "th:object",
+                    "th:action",
+                    "th:href",
+                    "sec:authorize",
+                    "hx-get",
+                    "hx-post"
+                ]
+            }
         }
     },
     "notes": {
