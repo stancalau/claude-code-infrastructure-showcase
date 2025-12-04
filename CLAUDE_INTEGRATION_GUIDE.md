@@ -6,7 +6,7 @@
 
 ## Overview
 
-This repository is a **reference library** of Claude Code infrastructure components for Spring Boot 3.x development. Users will ask you to help integrate specific pieces into their projects. Your role is to:
+This repository is a **reference library** of Claude Code infrastructure components for LiveKit Testing Framework development. Users will ask you to help integrate specific pieces into their projects. Your role is to:
 
 1. **Ask clarifying questions** about their project structure
 2. **Copy the appropriate files**
@@ -21,23 +21,44 @@ This repository is a **reference library** of Claude Code infrastructure compone
 
 **CRITICAL:** Before integrating a skill, verify the user's tech stack matches the skill requirements.
 
-### Backend Skills
+### LiveKit Testing Skills
 
-**backend-dev-guidelines requires:**
-- Spring Boot 3.x
-- Java 17+
+**livekit-testing-guidelines requires:**
+- Java 21+
+- Gradle
+- TestContainers 1.20.x
 - Lombok
-- Spring Data JPA
-- Maven or Gradle
+- JUnit 5
 
 **Before integrating, ask:**
-"Do you use Spring Boot 3.x with Lombok?"
+"Do you use Java 21+ with Gradle and TestContainers?"
 
 **If NO:**
 ```
-The backend-dev-guidelines skill is designed for Spring Boot 3.x with Lombok. I can:
+The livekit-testing-guidelines skill is designed for Java 21+ with TestContainers. I can:
 1. Help you create similar guidelines adapted for [their stack] using this as a template
-2. Extract the architecture patterns (layered architecture works for any framework)
+2. Extract the architecture patterns (container orchestration works for any containerized testing)
+3. Skip this skill
+
+Which would you prefer?
+```
+
+### BDD Testing Skills
+
+**bdd-tester requires:**
+- Cucumber 7.x
+- JUnit 5
+- Gherkin feature files
+- Step definitions
+
+**Before integrating, ask:**
+"Do you use Cucumber/Gherkin for BDD testing?"
+
+**If NO:**
+```
+The bdd-tester skill is designed for Cucumber BDD testing. I can:
+1. Adapt it for your test framework (TestNG, plain JUnit, etc.)
+2. Extract BDD concepts without Cucumber specifics
 3. Skip this skill
 
 Which would you prefer?
@@ -47,8 +68,7 @@ Which would you prefer?
 
 These work for ANY tech stack:
 - **skill-developer** - Meta-skill, no tech requirements
-- **route-tester** - Adapted for MockMvc/TestContainers (Spring Boot focused)
-- **error-tracking** - Logging patterns (Spring Boot focused but concepts transfer)
+- **error-tracking** - Logging patterns (concepts transfer across frameworks)
 
 ---
 
@@ -70,14 +90,15 @@ When user says: **"Add [component] to my project"**
 
 ### Step-by-Step Process
 
-**When user requests a skill** (e.g., "add backend-dev-guidelines"):
+**When user requests a skill** (e.g., "add livekit-testing-guidelines"):
 
 #### 1. Understand Their Project
 
 **ASK THESE QUESTIONS:**
-- "What's your project structure? Single module, multi-module Maven/Gradle?"
+- "What's your project structure? Standard Gradle or multi-module?"
 - "Where is your Java source code located?"
-- "Do you use Spring Boot 3.x with Lombok?"
+- "Do you use TestContainers for container orchestration?"
+- "Do you use Cucumber for BDD testing?"
 
 #### 2. Copy the Skill
 
@@ -106,28 +127,31 @@ Test-Path .claude/skills/skill-rules.json
 
 **CRITICAL:** Update `pathPatterns` in skill-rules.json to match THEIR structure:
 
-**Example - User has multi-module Maven:**
+**Example - LiveKit testing framework structure:**
 ```json
 {
-  "backend-dev-guidelines": {
+  "livekit-testing-guidelines": {
     "fileTriggers": {
       "pathPatterns": [
-        "api/src/main/java/**/*.java",
-        "core/src/main/java/**/*.java",
-        "service/src/main/java/**/*.java"
+        "src/main/java/**/container/**/*.java",
+        "src/main/java/**/page/**/*.java",
+        "src/main/java/**/state/**/*.java",
+        "src/main/java/**/config/**/*.java"
       ]
     }
   }
 }
 ```
 
-**Example - User has single module:**
+**Example - BDD test files:**
 ```json
 {
-  "backend-dev-guidelines": {
+  "bdd-tester": {
     "fileTriggers": {
       "pathPatterns": [
-        "src/main/java/**/*.java"
+        "src/test/resources/features/**/*.feature",
+        "src/test/java/**/bdd/**/*.java",
+        "src/test/java/**/steps/**/*.java"
       ]
     }
   }
@@ -139,7 +163,8 @@ Test-Path .claude/skills/skill-rules.json
 {
   "pathPatterns": [
     "**/*.java",
-    "src/main/java/**/*.java"
+    "src/main/java/**/*.java",
+    "src/test/java/**/*.java"
   ]
 }
 ```
@@ -160,25 +185,25 @@ Get-Content .claude/skills/skill-rules.json | ConvertFrom-Json
 
 ### Skill-Specific Notes
 
-#### backend-dev-guidelines
-- **Tech Requirements:** Spring Boot 3.x, Java 17+, Lombok
-- **Ask:** "Do you use Spring Boot with Lombok?" "Where's your Java source code?"
+#### livekit-testing-guidelines
+- **Tech Requirements:** Java 21+, Gradle, TestContainers, Lombok
+- **Ask:** "Do you use TestContainers?" "Where's your container code?"
 - **If different stack:** Offer to adapt using this as template
-- **Customize:** pathPatterns
-- **Example paths:** `src/main/java/`, `api/src/main/java/`, `**/src/main/java/`
+- **Customize:** pathPatterns for container, page, state, config directories
+- **Example paths:** `src/main/java/**/container/`, `src/main/java/**/page/`
 
-#### route-tester
-- **Tech Requirements:** Spring Boot with Spring Test
-- **Ask:** "Do you use MockMvc or TestContainers for testing?"
-- **If NO:** "This skill is designed for Spring Boot testing. Want me to adapt it or skip it?"
-- **Customize:** Test paths and patterns
-- **Works with:** MockMvc, TestRestTemplate, TestContainers
+#### bdd-tester
+- **Tech Requirements:** Cucumber 7.x, JUnit 5
+- **Ask:** "Do you use Cucumber for BDD testing?"
+- **If NO:** "This skill is designed for Cucumber BDD. Want me to adapt it or skip it?"
+- **Customize:** Feature file and step definition paths
+- **Works with:** Gherkin, Step Definitions, Scenario Outlines
 
 #### error-tracking
-- **Tech Requirements:** Spring Boot (works with SLF4J/Logback)
-- **Ask:** "Do you use Spring Boot?" "Where's your Java source code?"
+- **Tech Requirements:** SLF4J/Logback (works with any Java project)
+- **Ask:** "Do you use SLF4J for logging?" "Where's your Java source code?"
 - **Customize:** pathPatterns
-- **Adaptation tip:** Error handling philosophy transfers to other frameworks
+- **Adaptation tip:** Logging philosophy transfers to other frameworks
 
 #### skill-developer
 - **Tech Requirements:** None!
@@ -197,22 +222,20 @@ When user's tech stack differs from skill requirements, you have options:
 **Process:**
 1. **Copy the skill as a starting point:**
    ```powershell
-   Copy-Item -Recurse showcase/.claude/skills/backend-dev-guidelines `
-         .claude/skills/quarkus-dev-guidelines
+   Copy-Item -Recurse showcase/.claude/skills/livekit-testing-guidelines `
+         .claude/skills/playwright-testing-guidelines
    ```
 
 2. **Identify what needs changing:**
-   - Framework-specific code examples (Spring → Quarkus)
-   - Library APIs (Spring Data → Panache)
-   - Annotation patterns
-   - Configuration formats
+   - Framework-specific code examples (Selenium -> Playwright)
+   - Container patterns (TestContainers -> Docker Compose)
+   - Build tool patterns (Gradle -> Maven)
 
 3. **Keep what transfers:**
-   - Layered architecture principles
-   - Service layer patterns
-   - Repository patterns
-   - DTO best practices
-   - Testing strategies
+   - Page Object patterns
+   - State management principles
+   - Container orchestration concepts
+   - Test organization strategies
 
 ### Option 2: Extract Framework-Agnostic Patterns
 
@@ -221,21 +244,21 @@ When user's tech stack differs from skill requirements, you have options:
 **What Usually Transfers Across Tech Stacks:**
 
 **Architecture & Organization:**
-- Layered architecture (Controller/Service/Repository pattern)
-- Separation of concerns
-- Package organization strategies
-- Repository pattern for data access
+- Page Object pattern for browser automation
+- State management patterns
+- Container orchestration concepts
+- Test data management
 
 **Development Practices:**
-- Error handling philosophy
-- Input validation importance
-- Testing strategies
+- BDD/Gherkin test specification
 - Logging best practices
+- Test isolation strategies
+- CI/CD integration patterns
 
 **Framework-Specific Code:**
-- Spring annotations → Don't transfer to Quarkus/Micronaut directly
-- JPA queries → Different ORM syntax
-- Security configuration → Framework-specific
+- Selenium WebDriver -> Different browser automation
+- TestContainers -> Different container orchestration
+- Cucumber annotations -> Different BDD framework
 
 ---
 
@@ -246,7 +269,7 @@ When user's tech stack differs from skill requirements, you have options:
 **Node.js is required** for hooks to work. Hooks are written in TypeScript and run via `npx tsx`, which works identically on Windows, Linux, and Mac.
 
 **Check Node.js Installation:**
-```bash
+```powershell
 node --version
 npm --version
 ```
@@ -302,12 +325,13 @@ npm install
 
 #### error-handling-reminder (Stop)
 
-**Purpose:** Reminds about Spring Boot best practices when Java files are edited
+**Purpose:** Reminds about best practices when Java files are edited
 
 **Checks for:**
-- Controllers without @Slf4j logging
-- Services without @Transactional
-- Missing @ControllerAdvice for exception handling
+- Containers without proper cleanup
+- Missing @Slf4j logging
+- Test methods without proper assertions
+- Missing state cleanup
 
 **Integration:**
 
@@ -346,7 +370,7 @@ Copy-Item showcase/.claude/hooks/error-handling-reminder.ts .claude/hooks/
 **For SIMPLE projects (single module):**
 - **RECOMMEND SKIPPING** these hooks
 - They're overkill for single-module projects
-- User can run `mvn compile` manually instead
+- User can run `./gradlew compileJava` manually instead
 
 **For COMPLEX projects (multi-module):**
 1. Copy the files
@@ -370,14 +394,14 @@ Copy-Item showcase/.claude/agents/[agent-name].md .claude/agents/
 
 ### Agent-Specific Notes
 
-**auth-route-tester / auth-route-debugger:**
-- Require JWT-based authentication in user's project
-- Ask: "Do you use JWT for auth?"
-- If NO: "These agents are for JWT auth. Skip them or want me to adapt?"
+**bdd-scenario-tester / container-debugger:**
+- Work with Cucumber and TestContainers respectively
+- Ask: "Do you use Cucumber for BDD?" "Do you use TestContainers?"
+- If NO: "These agents are specialized. Skip them or want me to adapt?"
 
 **auto-error-resolver:**
 - Works with Maven or Gradle
-- May need build command updates
+- May need build command updates (`./gradlew` vs `mvn`)
 
 **All other agents:**
 - Copy as-is, they're fully generic
@@ -407,22 +431,25 @@ Commands may reference dev docs paths. **Check and update:**
 ### Pattern: Asking About Project Structure
 
 **DON'T assume:**
-- "I'll add this for your api module"
+- "I'll add this for your container module"
 - "Configuring for your src/main/java directory"
 
 **DO ask:**
-- "What's your project structure? Single module or multi-module?"
+- "What's your project structure? Standard Gradle or multi-module?"
 - "Where is your Java source code located?"
-- "Do you use Maven or Gradle?"
+- "Do you use Gradle or Maven?"
 
 ### Pattern: Customizing skill-rules.json
 
-**User has multi-module Maven:**
+**User has standard LiveKit testing structure:**
 ```json
 {
   "pathPatterns": [
-    "*/src/main/java/**/*.java",
-    "*/src/test/java/**/*.java"
+    "src/main/java/**/container/**/*.java",
+    "src/main/java/**/page/**/*.java",
+    "src/main/java/**/state/**/*.java",
+    "src/test/java/**/bdd/**/*.java",
+    "src/test/resources/features/**/*.feature"
   ]
 }
 ```
@@ -431,7 +458,8 @@ Commands may reference dev docs paths. **Check and update:**
 ```json
 {
   "pathPatterns": [
-    "src/main/java/**/*.java"
+    "src/main/java/**/*.java",
+    "src/test/java/**/*.java"
   ]
 }
 ```
@@ -479,11 +507,11 @@ node --version
 **DO:** Extract only UserPromptSubmit and PostToolUse sections
 
 ### DON'T: Keep example module names
-**Why:** User doesn't have blog-api, auth-service, etc.
+**Why:** User doesn't have container, page, state, etc. directories
 **DO:** Ask about their actual structure and update
 
-### DON'T: Assume Maven structure
-**Why:** User might use Gradle or different directory layout
+### DON'T: Assume Gradle structure
+**Why:** User might use Maven or different directory layout
 **DO:** Ask first, then customize
 
 ### DON'T: Add all skills at once
@@ -494,57 +522,58 @@ node --version
 
 ## Example Integration Conversations
 
-### Example 1: Adding Backend Skill
+### Example 1: Adding LiveKit Testing Skill
 
-**User:** "Add the backend-dev-guidelines skill to my project"
+**User:** "Add the livekit-testing-guidelines skill to my project"
 
 **Claude should respond:**
 ```
-I'll add the backend-dev-guidelines skill. First, I need to understand
+I'll add the livekit-testing-guidelines skill. First, I need to understand
 your project structure:
 
-1. Is this a single-module or multi-module Maven/Gradle project?
+1. Is this a standard Gradle or multi-module project?
 2. Where is your Java source code located?
-3. Do you use Spring Boot 3.x with Lombok?
+3. Do you use TestContainers for container orchestration?
+4. Do you have container, page object, and state management classes?
 ```
 
-**User:** "Single module Maven, code is in src/main/java/, yes Spring Boot 3.2"
+**User:** "Standard Gradle, code is in src/main/java/, yes I use TestContainers"
 
 **Claude should:**
 1. Copy the skill directory
-2. Update skill-rules.json with pathPattern: `"src/main/java/**/*.java"`
+2. Update skill-rules.json with appropriate pathPatterns
 3. Verify it's copied correctly
 4. Respond:
 ```
-Added backend-dev-guidelines skill!
+Added livekit-testing-guidelines skill!
 
 Configuration:
 - Skill triggers when editing files in src/main/java/
-- Activated by keywords like "controller", "service", "repository", "entity"
+- Activated by keywords like "container", "page object", "TestContainers", "WebDriver"
 
 Try it: Edit a Java file and you should see the skill suggestion.
 ```
 
 ### Example 2: Tech Stack Mismatch
 
-**User:** "Add the backend-dev-guidelines skill to my Quarkus project"
+**User:** "Add the bdd-tester skill to my TestNG project"
 
 **Claude should:**
 ```
-I see you're using Quarkus. The backend-dev-guidelines skill is specifically
-designed for Spring Boot 3.x. I have a few options:
+I see you're using TestNG. The bdd-tester skill is specifically
+designed for Cucumber/Gherkin BDD testing. I have a few options:
 
-Option 1 (Recommended): I can create a quarkus-dev-guidelines skill using the
-Spring skill as a template. I'll adapt:
-- Annotations for Quarkus (CDI instead of Spring DI)
-- Replace Spring Data JPA with Panache
-- Update configuration patterns for Quarkus
-- Keep: Layered architecture, DTO patterns, testing strategies
+Option 1 (Recommended): I can create a testng-testing skill using the
+BDD skill as a template. I'll adapt:
+- Test annotations for TestNG (@Test, @BeforeMethod, etc.)
+- Data providers instead of Scenario Outlines
+- TestNG assertions and reporting
+- Keep: Test organization, logging, state management patterns
 
-Option 2: Extract only the framework-agnostic patterns (layered architecture,
-DTOs, testing) without Spring-specific code.
+Option 2: Extract only the framework-agnostic patterns (test organization,
+page objects, logging) without Cucumber-specific code.
 
-Option 3: Skip it and help you create Quarkus guidelines from scratch.
+Option 3: Skip it and help you create TestNG guidelines from scratch.
 
 Which would you prefer?
 ```
@@ -558,12 +587,12 @@ Which would you prefer?
 | Component | Tech Requirements | Customization | What to Ask |
 |-----------|------------------|--------------|-------------|
 | **skill-developer** | None | None | Copy as-is |
-| **backend-dev-guidelines** | Spring Boot 3.x/Lombok | Paths + tech check | "Use Spring Boot?" "Where's Java source?" |
-| **route-tester** | Spring Test | Test paths | "Use MockMvc/TestContainers?" |
-| **error-tracking** | Spring Boot | Paths | "Where's Java source?" |
+| **livekit-testing-guidelines** | Java 21+/TestContainers | Paths + tech check | "Use TestContainers?" "Where's container code?" |
+| **bdd-tester** | Cucumber 7.x | Test paths | "Use Cucumber/Gherkin?" |
+| **error-tracking** | SLF4J | Paths | "Where's Java source?" |
 | **skill-activation-prompt** | Node.js | None | Copy as-is, run `npm install` |
 | **error-handling-reminder** | Node.js | None | Copy as-is, run `npm install` |
-| **All agents** | Minimal | Check paths | Auth for auth-related |
+| **All agents** | Minimal | Check paths | Container/BDD for specialized |
 | **All commands** | Paths | Ask about dev docs location |
 
 ### When to Recommend Skipping
@@ -571,8 +600,8 @@ Which would you prefer?
 | Component | Skip If... |
 |-----------|-----------|
 | **Build hooks** | Single-module project or different build setup |
-| **route-tester** | Not using Spring Test patterns |
-| **auth agents** | Not using JWT authentication |
+| **bdd-tester** | Not using Cucumber/Gherkin patterns |
+| **container agents** | Not using TestContainers |
 
 ---
 
@@ -591,7 +620,7 @@ Which would you prefer?
 
 **When user is unsure:**
 - Recommend starting with just skill-activation hooks
-- Add backend skill if they use Spring Boot
+- Add livekit-testing-guidelines if they use TestContainers
 - Add more later as needed
 
 **Always explain what you're doing:**

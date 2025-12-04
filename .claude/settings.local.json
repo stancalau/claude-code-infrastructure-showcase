@@ -15,7 +15,9 @@
       "Bash(dir:*)",
       "Bash(npm install)",
       "Bash(npx tsc:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash($env:CLAUDE_PROJECT_DIR=\"C:\\StancalauRo\\claude-code-infrastructure-showcase\")"
     ],
     "deny": [],
     "ask": []

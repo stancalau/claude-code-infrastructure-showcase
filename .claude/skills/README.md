@@ -37,26 +37,26 @@ Skills are modular knowledge bases that Claude loads when needed. They provide:
 
 ---
 
-### backend-dev-guidelines
-**Purpose:** Spring Boot 3.x development patterns with Lombok and JPA
+### livekit-testing-guidelines
+**Purpose:** LiveKit testing framework patterns with TestContainers, Selenium, and Cucumber
 
-**Files:** 11 resource files
+**Files:** 10 resource files
 
 **Covers:**
-- Layered architecture (Controller → Service → Repository)
-- Spring Data JPA with optimized queries
-- Bean Validation (Jakarta Validation)
-- Spring Security with JWT
-- Exception handling with @ControllerAdvice
-- Lombok best practices
-- TestContainers integration testing
-- Configuration with @ConfigurationProperties
+- Container orchestration (LiveKit, Redis, MinIO, Egress)
+- Page Object pattern for WebRTC automation
+- State manager patterns for lifecycle coordination
+- Selenium WebDriver configuration
+- Cucumber/Gherkin BDD testing
+- Token and permission management
+- VNC recording and CI/CD patterns
 
 **Use when:**
-- Creating/modifying REST endpoints
-- Building controllers or services
-- Database operations with JPA
-- Setting up security
+- Creating/modifying container classes
+- Building page objects for WebRTC
+- Implementing state managers
+- Configuring Selenium automation
+- Writing BDD scenarios
 
 **Customization:** Update `pathPatterns` in skill-rules.json to match your Java directories
 
@@ -64,58 +64,61 @@ Skills are modular knowledge bases that Claude loads when needed. They provide:
 ```json
 {
   "pathPatterns": [
-    "src/main/java/**/*.java",
-    "*/src/main/java/**/*.java",
-    "**/controller/**/*.java",
-    "**/service/**/*.java"
+    "src/main/java/**/container/**/*.java",
+    "src/main/java/**/page/**/*.java",
+    "src/main/java/**/state/**/*.java",
+    "src/test/resources/features/**/*.feature"
   ]
 }
 ```
 
-**[View Skill](backend-dev-guidelines/)**
+**[View Skill](livekit-testing-guidelines/)**
 
 ---
 
-### route-tester
-**Purpose:** Testing REST endpoints with MockMvc and TestContainers
+### bdd-tester
+**Purpose:** Cucumber/Gherkin BDD testing patterns
 
 **Files:** 1 main file
 
 **Covers:**
-- MockMvc unit testing
-- TestContainers integration testing
-- @WebMvcTest patterns
-- Authentication testing with @WithMockUser
-- Response validation with jsonPath
+- Feature file structure
+- Step definitions
+- Scenario Outlines with data tables
+- Cucumber hooks (@Before/@After)
+- State sharing between steps
+- Tag-based test execution
 
 **Use when:**
-- Testing API endpoints
-- Writing controller tests
-- Validating request/response handling
+- Writing feature files
+- Creating step definitions
+- Setting up BDD test infrastructure
+- Debugging scenario failures
 
-**Customization:** Customize for your test patterns
+**Customization:** Update paths for your feature files and step definitions
 
-**[View Skill](route-tester/)**
+**[View Skill](bdd-tester/)**
 
 ---
 
 ### error-tracking
-**Purpose:** Logging and exception handling patterns
+**Purpose:** Logging and debugging patterns for test frameworks
 
 **Files:** 1 main file
 
 **Covers:**
 - SLF4J/Logback logging
-- @RestControllerAdvice for global exception handling
-- Custom exceptions (ResourceNotFoundException, etc.)
-- Error response format
-- Spring Actuator health checks
+- Container debugging
+- WebDriver troubleshooting
+- Cucumber scenario debugging
+- Screenshot capture on failure
+- Logback configuration
 
 **Use when:**
-- Setting up logging
-- Creating exception handlers
-- Adding health checks
-- Debugging production issues
+- Adding logging to tests
+- Debugging container issues
+- Troubleshooting Selenium failures
+- Investigating BDD scenario failures
 
 **Customization:** Update `pathPatterns` for your project
 
@@ -129,7 +132,7 @@ Skills are modular knowledge bases that Claude loads when needed. They provide:
 
 **For Claude Code:**
 ```
-User: "Add the backend-dev-guidelines skill to my project"
+User: "Add the livekit-testing-guidelines skill to my project"
 
 Claude should:
 1. Ask about project structure
@@ -144,7 +147,7 @@ See [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md) for complet
 
 **Step 1: Copy the skill directory**
 ```powershell
-Copy-Item -Recurse claude-code-infrastructure-showcase/.claude/skills/backend-dev-guidelines `
+Copy-Item -Recurse claude-code-infrastructure-showcase/.claude/skills/livekit-testing-guidelines `
       your-project/.claude/skills/
 ```
 
@@ -160,10 +163,11 @@ Then customize the `pathPatterns` for your project:
 ```json
 {
   "skills": {
-    "backend-dev-guidelines": {
+    "livekit-testing-guidelines": {
       "fileTriggers": {
         "pathPatterns": [
-          "src/main/java/**/*.java"
+          "src/main/java/**/*.java",
+          "src/test/resources/features/**/*.feature"
         ]
       }
     }
@@ -182,10 +186,10 @@ Then customize the `pathPatterns` for your project:
 ### What It Does
 
 Defines when skills should activate based on:
-- **Keywords** in user prompts ("controller", "service", "repository")
+- **Keywords** in user prompts ("container", "page object", "cucumber")
 - **Intent patterns** (regex matching user intent)
-- **File path patterns** (editing Java files)
-- **Content patterns** (code contains @RestController)
+- **File path patterns** (editing Java files, feature files)
+- **Content patterns** (code contains GenericContainer, @Given)
 
 ### Configuration Format
 
@@ -201,7 +205,7 @@ Defines when skills should activate based on:
     },
     "fileTriggers": {
       "pathPatterns": ["src/main/java/**/*.java"],
-      "contentPatterns": ["@RestController"]
+      "contentPatterns": ["GenericContainer"]
     }
   }
 }
@@ -214,7 +218,7 @@ Defines when skills should activate based on:
 
 **Use "block" for:**
 - Preventing breaking changes
-- Critical database operations
+- Critical container operations
 - Security-sensitive code
 
 **Use "suggest" for:**
@@ -277,7 +281,7 @@ Get-ChildItem .claude/skills/
 Get-Content .claude/skills/skill-rules.json | ConvertFrom-Json
 
 # Check hooks exist
-Get-ChildItem .claude/hooks/*.sh
+Get-ChildItem .claude/hooks/*.ts
 ```
 
 ### Skill activates too often
@@ -308,7 +312,7 @@ Update skill-rules.json:
 
 **Common mistakes:**
 - Keeping example paths
-- Not asking about multi-module vs single-module
+- Not asking about project structure
 - Copying skill-rules.json without customization
 
 ---

@@ -1,6 +1,6 @@
 # Agents
 
-Specialized agents for complex, multi-step tasks in Spring Boot development.
+Specialized agents for complex, multi-step tasks in LiveKit testing framework development.
 
 ---
 
@@ -22,7 +22,7 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 **Purpose:** Review code for architectural consistency and best practices
 
 **When to use:**
-- After implementing a new Spring Boot feature
+- After implementing a new container or page object
 - Before merging significant changes
 - When refactoring code
 - To validate architectural decisions
@@ -36,7 +36,7 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 
 **When to use:**
 - Reorganizing package structures
-- Breaking down large services
+- Breaking down large classes
 - Updating import paths after moves
 - Improving code maintainability
 
@@ -48,9 +48,9 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 **Purpose:** Create comprehensive documentation
 
 **When to use:**
-- Documenting new features
-- Creating API documentation
-- Writing developer guides
+- Documenting new containers or page objects
+- Creating test framework guides
+- Writing developer documentation
 - Generating architectural overviews
 
 **Integration:** Copy as-is
@@ -74,11 +74,10 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 **Purpose:** Define features, write user stories, create acceptance criteria
 
 **When to use:**
-- Defining new features or epics
+- Defining new test scenarios
 - Breaking down large tasks into stories
 - Writing acceptance criteria
 - Organizing requirements documentation
-- Scoping work before development
 
 **Integration:** Copy as-is (works with product-owner skill)
 
@@ -123,40 +122,41 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 
 ---
 
-### auth-route-tester
-**Purpose:** Test authenticated API endpoints
+### bdd-scenario-tester
+**Purpose:** Test Cucumber BDD scenarios
 
 **When to use:**
-- Testing routes with JWT authentication
-- Validating endpoint functionality
-- Debugging authentication issues
+- Testing new feature files
+- Validating step definitions
+- Debugging scenario failures
+- Verifying BDD test infrastructure
 
-**Integration:** Requires JWT-based auth setup
+**Integration:** Copy as-is (Cucumber/Gherkin focused)
 
 ---
 
-### auth-route-debugger
-**Purpose:** Debug authentication issues
+### container-debugger
+**Purpose:** Debug TestContainers and Docker issues
 
 **When to use:**
-- Auth failures
-- Token issues
-- Spring Security problems
-- Permission errors
+- Container startup failures
+- Network connectivity issues
+- Port mapping problems
+- Health check failures
 
-**Integration:** Requires JWT-based auth setup
+**Integration:** Copy as-is (TestContainers focused)
 
 ---
 
 ### auto-error-resolver
-**Purpose:** Automatically fix Java/Spring Boot compilation errors
+**Purpose:** Automatically fix Java compilation errors
 
 **When to use:**
 - Build failures with compilation errors
 - After refactoring that breaks code
 - Systematic error resolution needed
 
-**Integration:** Works with Maven or Gradle projects
+**Integration:** Works with Gradle projects
 
 ---
 
@@ -179,14 +179,19 @@ That's it! Agents work immediately.
 
 ### Agents Requiring Customization
 
-**auth-route-tester / auth-route-debugger:**
-- Require Spring Security with JWT authentication
-- Update service URLs from examples
-- Customize for your auth setup
+**bdd-scenario-tester:**
+- Requires Cucumber/Gherkin setup
+- Update paths for your feature files
+- Customize for your step definition patterns
+
+**container-debugger:**
+- Requires TestContainers setup
+- Update for your container types
+- Customize for your Docker configuration
 
 **auto-error-resolver:**
-- Works with Maven or Gradle
-- Update commands if using non-standard build setup
+- Works with Gradle (./gradlew)
+- Update commands if using Maven
 
 ---
 
@@ -198,29 +203,29 @@ That's it! Agents work immediately.
 | Complex analysis needed | Checking best practices |
 | Autonomous work preferred | Want to maintain control |
 | Task has clear end goal | Ongoing development work |
-| Example: "Review all controllers" | Example: "Creating a new endpoint" |
+| Example: "Test all BDD scenarios" | Example: "Creating a new container" |
 
 **Both can work together:**
 - Skill provides patterns during development
-- Agent reviews the result when complete
+- Agent tests/reviews the result when complete
 
 ---
 
 ## Agent Quick Reference
 
-| Agent | Complexity | Customization | Auth Required |
-|-------|-----------|---------------|---------------|
-| code-architecture-reviewer | Medium | None | No |
-| code-refactor-master | High | None | No |
-| documentation-architect | Medium | None | No |
-| plan-reviewer | Low | None | No |
-| product-owner | Medium | None | No |
-| request-analyzer | Low | None | No |
-| refactor-planner | Medium | None | No |
-| web-research-specialist | Low | None | No |
-| auth-route-tester | Medium | Auth setup | JWT |
-| auth-route-debugger | Medium | Auth setup | JWT |
-| auto-error-resolver | Low | Build tool | No |
+| Agent | Complexity | Customization | Focus |
+|-------|-----------|---------------|-------|
+| code-architecture-reviewer | Medium | None | Code quality |
+| code-refactor-master | High | None | Refactoring |
+| documentation-architect | Medium | None | Documentation |
+| plan-reviewer | Low | None | Planning |
+| product-owner | Medium | None | Requirements |
+| request-analyzer | Low | None | Clarification |
+| refactor-planner | Medium | None | Strategy |
+| web-research-specialist | Low | None | Research |
+| bdd-scenario-tester | Medium | Paths | Cucumber BDD |
+| container-debugger | Medium | Container types | TestContainers |
+| auto-error-resolver | Low | Build tool | Compilation |
 
 ---
 
@@ -230,8 +235,9 @@ That's it! Agents work immediately.
 
 1. **Read [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)**
 2. **Just copy the .md file** - agents are standalone
-3. **For auth agents:** Ask if they use JWT authentication first
-4. **For auto-error-resolver:** Confirm Maven or Gradle project
+3. **For BDD agents:** Ask if they use Cucumber first
+4. **For container agents:** Ask about their TestContainers setup
+5. **For auto-error-resolver:** Confirm Gradle or Maven project
 
 **That's it!** Agents are the easiest components to integrate.
 

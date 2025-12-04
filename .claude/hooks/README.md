@@ -1,6 +1,6 @@
 # Hooks
 
-Cross-platform Claude Code hooks for Spring Boot development. Written in TypeScript, works on Windows, Linux, and Mac.
+Cross-platform Claude Code hooks for LiveKit BDD testing development. Written in TypeScript, works on Windows, Linux, and Mac.
 
 ---
 
@@ -81,12 +81,12 @@ npm install
 
 ### error-handling-reminder (Stop)
 
-**Purpose:** Reminds about Spring Boot best practices when Java files are edited
+**Purpose:** Reminds about test quality best practices when Java test files are edited
 
 **Checks for:**
-- Controllers without @Slf4j logging
-- Services without @Transactional
-- Missing @ControllerAdvice for exception handling
+- Step definitions without proper logging
+- Missing container cleanup in @After hooks
+- Tests without proper assertions
 
 ---
 
@@ -201,7 +201,7 @@ Hooks are scripts that run at specific points in Claude's workflow:
 | File | Purpose |
 |------|---------|
 | `skill-activation-prompt.ts` | Auto-suggest skills based on prompt |
-| `error-handling-reminder.ts` | Spring Boot best practice reminders |
+| `error-handling-reminder.ts` | Test quality best practice reminders |
 | `package.json` | npm dependencies (tsx) |
 | `tsconfig.json` | TypeScript configuration |
 

@@ -25,65 +25,48 @@
                 ]
             }
         },
-        "backend-dev-guidelines": {
+        "livekit-testing-guidelines": {
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",
-            "description": "Backend development patterns for Spring Boot 3.x with Lombok and TestContainers",
+            "description": "Testing framework patterns for LiveKit WebRTC applications with TestContainers, Selenium, and Cucumber",
             "promptTriggers": {
                 "keywords": [
-                    "backend",
-                    "backend development",
-                    "spring boot",
-                    "controller",
-                    "service",
-                    "repository",
-                    "entity",
-                    "JPA",
-                    "Hibernate",
-                    "API",
-                    "endpoint",
-                    "REST",
-                    "validation",
-                    "Bean Validation",
-                    "DTO",
-                    "security",
-                    "Spring Security",
-                    "Lombok",
-                    "TestContainers",
-                    "configuration",
-                    "ConfigurationProperties",
-                    "transaction",
-                    "Transactional",
-                    "docker",
-                    "dockerfile",
-                    "docker-compose",
-                    "containerize",
+                    "livekit",
                     "container",
-                    "deployment",
-                    "buildpacks",
-                    "jib"
+                    "testcontainers",
+                    "page object",
+                    "webdriver",
+                    "selenium",
+                    "webrtc",
+                    "state manager",
+                    "token",
+                    "permission",
+                    "room",
+                    "egress",
+                    "minio",
+                    "redis",
+                    "browser automation",
+                    "vnc",
+                    "recording",
+                    "docker"
                 ],
                 "intentPatterns": [
-                    "(create|add|implement|build).*?(endpoint|API|controller|service|repository|entity)",
-                    "(fix|handle|debug).*?(error|exception|backend)",
-                    "(add|implement).*?(validation|error.*?handling|security)",
-                    "(organize|structure|refactor).*?(backend|service|API)",
-                    "(how to|best practice).*?(spring|controller|service|JPA)"
+                    "(create|add|implement|build).*?(container|page.*?object|state.*?manager)",
+                    "(test|automate).*?(webrtc|browser|livekit|room)",
+                    "(how to|best practice).*?(container|selenium|testcontainers|page object)",
+                    "(start|stop|manage).*?container",
+                    "(create|generate).*?token"
                 ]
             },
             "fileTriggers": {
                 "pathPatterns": [
                     "src/main/java/**/*.java",
-                    "**/controller/**/*.java",
-                    "**/service/**/*.java",
-                    "**/repository/**/*.java",
-                    "**/entity/**/*.java",
-                    "**/dto/**/*.java",
+                    "**/container/**/*.java",
+                    "**/page/**/*.java",
+                    "**/state/**/*.java",
                     "**/config/**/*.java",
-                    "**/Dockerfile*",
-                    "**/docker-compose*.yml",
-                    "**/docker-compose*.yaml"
+                    "**/util/**/*.java"
                 ],
                 "pathExclusions": [
                     "**/test/**/*.java",
@@ -91,52 +74,64 @@
                     "**/*Tests.java"
                 ],
                 "contentPatterns": [
-                    "@RestController",
-                    "@Controller",
-                    "@Service",
-                    "@Repository",
-                    "@Entity",
-                    "@Configuration",
-                    "JpaRepository",
-                    "@Transactional"
+                    "GenericContainer",
+                    "TestContainers",
+                    "WebDriver",
+                    "ChromeDriver",
+                    "LiveKitContainer",
+                    "StateManager",
+                    "AccessToken",
+                    "VideoGrant"
                 ]
             }
         },
-        "route-tester": {
+        "bdd-tester": {
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",
-            "description": "Testing REST endpoints in Spring Boot applications with MockMvc and TestContainers",
+            "description": "Cucumber/Gherkin BDD testing patterns with step definitions and scenario management",
             "promptTriggers": {
                 "keywords": [
-                    "test endpoint",
-                    "test API",
-                    "test controller",
-                    "MockMvc",
-                    "WebMvcTest",
-                    "SpringBootTest",
-                    "TestContainers",
-                    "integration test",
-                    "API testing"
+                    "cucumber",
+                    "gherkin",
+                    "bdd",
+                    "feature file",
+                    "step definition",
+                    "scenario",
+                    "scenario outline",
+                    "given when then",
+                    "before hook",
+                    "after hook",
+                    "background",
+                    "examples",
+                    "data table",
+                    "tags"
                 ],
                 "intentPatterns": [
-                    "(test|debug|verify).*?(endpoint|API|controller)",
-                    "(how to|how do I).*?test.*?(endpoint|API|controller)",
-                    "test.*?(authenticated|auth|security)"
+                    "(write|create|add).*?(feature|scenario|step)",
+                    "(test|verify|validate).*?(behavior|scenario|feature)",
+                    "(how to|how do I).*?(cucumber|gherkin|bdd)",
+                    "(run|execute).*?(scenario|feature|test)"
                 ]
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "**/controller/**/*.java",
-                    "**/*Test.java",
-                    "**/*Tests.java",
-                    "**/test/**/*.java"
+                    "src/test/resources/features/**/*.feature",
+                    "**/bdd/**/*.java",
+                    "**/steps/**/*.java",
+                    "**/*Steps.java",
+                    "**/CucumberHooks.java"
                 ],
                 "contentPatterns": [
-                    "@WebMvcTest",
-                    "@SpringBootTest",
-                    "MockMvc",
-                    "@Testcontainers"
+                    "@Given",
+                    "@When",
+                    "@Then",
+                    "@Before",
+                    "@After",
+                    "Feature:",
+                    "Scenario:",
+                    "Scenario Outline:",
+                    "io.cucumber"
                 ]
             }
         },
@@ -175,37 +170,40 @@
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",
-            "description": "Centralized logging, exception handling, and monitoring patterns for Spring Boot",
+            "description": "Logging, debugging, and error tracking patterns for test frameworks",
             "promptTriggers": {
                 "keywords": [
                     "error handling",
                     "exception",
                     "logging",
                     "error tracking",
-                    "ControllerAdvice",
-                    "ExceptionHandler",
-                    "monitoring",
-                    "Actuator",
-                    "Slf4j"
+                    "debug",
+                    "debugging",
+                    "trace",
+                    "log",
+                    "Slf4j",
+                    "logback",
+                    "stack trace",
+                    "test failure"
                 ],
                 "intentPatterns": [
-                    "(add|create|implement|setup).*?(error handling|exception|logging)",
+                    "(add|create|implement|setup).*?(logging|debug|error handling)",
                     "(fix|handle|catch).*?(error|exception)",
-                    "(how to|best practice).*?(error|logging|monitoring)"
+                    "(how to|best practice).*?(log|debug|trace|error)",
+                    "(debug|troubleshoot|diagnose).*?(test|container|browser)"
                 ]
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "**/exception/**/*.java",
-                    "**/*ExceptionHandler.java",
-                    "**/*Controller.java",
-                    "**/*Service.java"
+                    "**/*.java",
+                    "**/logback*.xml",
+                    "**/log4j*.xml"
                 ],
                 "contentPatterns": [
-                    "@ControllerAdvice",
-                    "@ExceptionHandler",
                     "@Slf4j",
-                    "log\\.(error|warn|info)"
+                    "log\\.(error|warn|info|debug|trace)",
+                    "Logger",
+                    "LoggerFactory"
                 ]
             }
         },

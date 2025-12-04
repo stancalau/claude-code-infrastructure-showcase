@@ -1,219 +1,240 @@
 ---
 name: error-tracking
-description: Centralized logging, exception handling, and monitoring patterns for Spring Boot applications. Use this skill when adding error handling, creating exception handlers, implementing logging, or setting up monitoring with Spring Actuator.
+description: Centralized logging, debugging, and error tracking patterns for Java test frameworks. Use this skill when adding logging to tests, debugging container issues, troubleshooting Selenium failures, or implementing test monitoring.
 ---
 
-# Spring Boot Error Tracking and Monitoring
+# Test Framework Error Tracking and Debugging
 
 ## Purpose
 
-This skill establishes patterns for centralized error handling, logging, and monitoring in Spring Boot applications.
+This skill establishes patterns for centralized logging, debugging, and error tracking in Java test frameworks using TestContainers, Selenium, and Cucumber.
 
 ## When to Use This Skill
 
-- Adding error handling to any code
-- Creating global exception handlers
-- Implementing logging with SLF4J/Logback
-- Setting up Spring Actuator monitoring
-- Creating custom exceptions
-- Adding health checks
+- Adding logging to test framework code
+- Debugging container startup/shutdown issues
+- Troubleshooting Selenium/WebDriver failures
+- Investigating BDD scenario failures
+- Creating diagnostic utilities
+- Implementing test reporting
 
 ## Core Patterns
 
-### 1. Global Exception Handler
+### 1. Logging with @Slf4j
 
 ```java
-@RestControllerAdvice
 @Slf4j
-public class GlobalExceptionHandler {
+public class ContainerStateManager {
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ErrorResponse handleNotFound(ResourceNotFoundException ex, WebRequest request) {
-        log.warn("Resource not found: {}", ex.getMessage());
-        return ErrorResponse.of(ex.getMessage(), "NOT_FOUND", getPath(request));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleValidation(MethodArgumentNotValidException ex, WebRequest request) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error ->
-            errors.put(error.getField(), error.getDefaultMessage()));
-        log.warn("Validation failed: {}", errors);
-        return ErrorResponse.withValidationErrors(errors, getPath(request));
-    }
-
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorResponse handleGeneric(Exception ex, WebRequest request) {
-        log.error("Unexpected error", ex);
-        return ErrorResponse.of("An unexpected error occurred", "INTERNAL_ERROR", getPath(request));
-    }
-
-    private String getPath(WebRequest request) {
-        return request.getDescription(false).replace("uri=", "");
-    }
-}
-```
-
-### 2. Custom Exceptions
-
-```java
-@ResponseStatus(HttpStatus.NOT_FOUND)
-public class ResourceNotFoundException extends RuntimeException {
-    public ResourceNotFoundException(String resource, Long id) {
-        super(String.format("%s not found with id: %d", resource, id));
-    }
-}
-
-@ResponseStatus(HttpStatus.CONFLICT)
-public class ConflictException extends RuntimeException {
-    public ConflictException(String message) {
-        super(message);
-    }
-}
-
-@ResponseStatus(HttpStatus.BAD_REQUEST)
-public class BadRequestException extends RuntimeException {
-    public BadRequestException(String message) {
-        super(message);
-    }
-}
-```
-
-### 3. Error Response Format
-
-```java
-public record ErrorResponse(
-    String message,
-    String code,
-    Map<String, String> errors,
-    LocalDateTime timestamp,
-    String path
-) {
-    public static ErrorResponse of(String message, String code, String path) {
-        return new ErrorResponse(message, code, Map.of(), LocalDateTime.now(), path);
-    }
-
-    public static ErrorResponse withValidationErrors(Map<String, String> errors, String path) {
-        return new ErrorResponse("Validation failed", "VALIDATION_ERROR", errors, LocalDateTime.now(), path);
-    }
-}
-```
-
-### 4. Logging with @Slf4j
-
-```java
-@Service
-@RequiredArgsConstructor
-@Slf4j
-public class UserServiceImpl implements UserService {
-
-    @Override
-    @Transactional
-    public UserResponse create(CreateUserRequest request) {
-        log.info("Creating user with email: {}", request.email());
+    public void startAll() {
+        log.info("Starting all containers...");
 
         try {
-            User user = userMapper.toEntity(request);
-            User saved = userRepository.save(user);
-            log.info("Created user with id: {}", saved.getId());
-            return userMapper.toResponse(saved);
-        } catch (DataIntegrityViolationException e) {
-            log.error("Failed to create user - constraint violation", e);
-            throw new ConflictException("Email already exists");
+            redis = new RedisContainer();
+            redis.start();
+            log.info("Redis started at port: {}", redis.getMappedPort(6379));
+
+            livekit = new LiveKitContainer("v1.5.0");
+            livekit.start();
+            log.info("LiveKit started at: {}", livekit.getWsUrl());
+
+        } catch (Exception e) {
+            log.error("Failed to start containers", e);
+            throw new ContainerStartupException("Container startup failed", e);
         }
+    }
+
+    public void stopAll() {
+        log.info("Stopping all containers...");
+
+        Stream.of(livekit, redis, minio)
+            .filter(Objects::nonNull)
+            .forEach(container -> {
+                try {
+                    container.stop();
+                    log.debug("Stopped container: {}", container.getDockerImageName());
+                } catch (Exception e) {
+                    log.warn("Error stopping container: {}", e.getMessage());
+                }
+            });
+
+        log.info("All containers stopped");
     }
 }
 ```
 
-### 5. Service Error Handling
+### 2. Container Debugging
 
 ```java
-@Service
-@RequiredArgsConstructor
 @Slf4j
-public class OrderServiceImpl implements OrderService {
+public class LiveKitContainer extends GenericContainer<LiveKitContainer> {
 
     @Override
-    @Transactional
-    public OrderResponse placeOrder(CreateOrderRequest request) {
-        log.info("Placing order for user: {}", request.userId());
+    public void start() {
+        log.info("Starting LiveKit container with image: {}", getDockerImageName());
 
         try {
-            Order order = createOrder(request);
-            inventoryService.reserve(order.getItems());
-            paymentService.process(order);
-            return orderMapper.toResponse(orderRepository.save(order));
+            super.start();
+            log.info("LiveKit container started successfully");
+            log.debug("Container ID: {}", getContainerId());
+            log.debug("Mapped ports: 7880 -> {}", getMappedPort(7880));
 
-        } catch (InsufficientInventoryException e) {
-            log.warn("Insufficient inventory for order: {}", e.getMessage());
-            throw new BadRequestException("Some items are out of stock");
+        } catch (Exception e) {
+            log.error("LiveKit container failed to start");
+            log.error("Container logs:\n{}", getLogs());
+            throw e;
+        }
+    }
 
-        } catch (PaymentFailedException e) {
-            log.error("Payment failed for order", e);
-            inventoryService.release(order.getItems());
-            throw new BadRequestException("Payment processing failed");
+    public void logContainerStatus() {
+        log.info("Container status:");
+        log.info("  Running: {}", isRunning());
+        log.info("  Host: {}", getHost());
+        log.info("  Ports: {}", getExposedPorts());
+        log.debug("  Full logs:\n{}", getLogs());
+    }
+}
+```
+
+### 3. Selenium/WebDriver Debugging
+
+```java
+@Slf4j
+public class WebDriverStateManager {
+
+    public WebDriver createDriver(boolean headless) {
+        log.info("Creating WebDriver (headless={})", headless);
+
+        try {
+            ChromeOptions options = buildChromeOptions(headless);
+            WebDriver driver = new ChromeDriver(options);
+
+            log.info("WebDriver created successfully");
+            log.debug("Session ID: {}", ((ChromeDriver) driver).getSessionId());
+
+            return driver;
+
+        } catch (Exception e) {
+            log.error("Failed to create WebDriver", e);
+            throw new WebDriverException("WebDriver creation failed", e);
+        }
+    }
+
+    public byte[] takeScreenshotOnFailure(WebDriver driver, String scenarioName) {
+        try {
+            byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+            log.info("Screenshot captured for scenario: {}", scenarioName);
+            return screenshot;
+        } catch (Exception e) {
+            log.warn("Failed to capture screenshot: {}", e.getMessage());
+            return new byte[0];
+        }
+    }
+
+    public void logBrowserState(WebDriver driver) {
+        log.info("Browser state:");
+        log.info("  Current URL: {}", driver.getCurrentUrl());
+        log.info("  Title: {}", driver.getTitle());
+        log.debug("  Page source length: {}", driver.getPageSource().length());
+    }
+}
+```
+
+### 4. Cucumber Scenario Debugging
+
+```java
+@Slf4j
+public class CucumberHooks {
+
+    @Before
+    public void beforeScenario(Scenario scenario) {
+        log.info("========================================");
+        log.info("Starting scenario: {}", scenario.getName());
+        log.info("Tags: {}", scenario.getSourceTagNames());
+        log.info("========================================");
+    }
+
+    @After
+    public void afterScenario(Scenario scenario) {
+        log.info("----------------------------------------");
+        log.info("Finished scenario: {}", scenario.getName());
+        log.info("Status: {}", scenario.getStatus());
+
+        if (scenario.isFailed()) {
+            log.error("Scenario FAILED: {}", scenario.getName());
+            captureDebugInfo(scenario);
+        }
+
+        log.info("----------------------------------------");
+    }
+
+    private void captureDebugInfo(Scenario scenario) {
+        WebDriver driver = WebDriverStateManager.getInstance().getDriver();
+
+        if (driver != null) {
+            byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+            scenario.attach(screenshot, "image/png", "failure-screenshot");
+
+            String pageSource = driver.getPageSource();
+            scenario.attach(pageSource.getBytes(), "text/html", "page-source");
+
+            log.error("Current URL: {}", driver.getCurrentUrl());
+            log.error("Browser logs captured");
+        }
+
+        ContainerStateManager containers = ContainerStateManager.getInstance();
+        if (containers.isLiveKitRunning()) {
+            String logs = containers.getLiveKitLogs();
+            scenario.attach(logs.getBytes(), "text/plain", "livekit-logs");
         }
     }
 }
 ```
 
-## Spring Actuator Monitoring
-
-### Configuration
-
-```yaml
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: when_authorized
-      probes:
-        enabled: true
-  health:
-    db:
-      enabled: true
-    diskspace:
-      enabled: true
-```
-
-### Custom Health Indicator
+### 5. Step Definition Logging
 
 ```java
-@Component
-public class DatabaseHealthIndicator implements HealthIndicator {
+@Slf4j
+public class RoomSteps {
 
-    private final DataSource dataSource;
+    @Given("the LiveKit server is running")
+    public void livekitServerIsRunning() {
+        log.info("Step: Verifying LiveKit server is running");
 
-    @Override
-    public Health health() {
-        try (Connection conn = dataSource.getConnection()) {
-            if (conn.isValid(1)) {
-                return Health.up().withDetail("database", "Available").build();
-            }
-        } catch (SQLException e) {
-            return Health.down().withException(e).build();
+        ContainerStateManager containers = ContainerStateManager.getInstance();
+        containers.ensureLiveKitStarted();
+
+        log.info("LiveKit URL: {}", containers.getLiveKitUrl());
+        log.debug("LiveKit logs:\n{}", containers.getLiveKitLogs());
+    }
+
+    @When("the user joins room {string}")
+    public void userJoinsRoom(String roomName) {
+        log.info("Step: User joining room '{}'", roomName);
+
+        try {
+            String token = roomClient.createToken(roomName, "user1");
+            log.debug("Created token for room: {}", roomName);
+
+            page.joinRoom(roomName, token);
+            log.info("Successfully joined room: {}", roomName);
+
+        } catch (Exception e) {
+            log.error("Failed to join room '{}': {}", roomName, e.getMessage());
+            throw e;
         }
-        return Health.down().build();
     }
 }
 ```
 
 ## Logging Configuration
 
-### logback-spring.xml
+### logback-test.xml
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
-
-    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+    <property name="LOG_PATTERN" value="%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -222,10 +243,10 @@ public class DatabaseHealthIndicator implements HealthIndicator {
     </appender>
 
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/application.log</file>
+        <file>build/logs/test.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/application.%d{yyyy-MM-dd}.log</fileNamePattern>
-            <maxHistory>30</maxHistory>
+            <fileNamePattern>build/logs/test.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
         </rollingPolicy>
         <encoder>
             <pattern>${LOG_PATTERN}</pattern>
@@ -237,30 +258,56 @@ public class DatabaseHealthIndicator implements HealthIndicator {
         <appender-ref ref="FILE"/>
     </root>
 
-    <logger name="com.company.app" level="DEBUG"/>
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <logger name="ro.stancalau.test" level="DEBUG"/>
+    <logger name="org.testcontainers" level="INFO"/>
+    <logger name="org.openqa.selenium" level="WARN"/>
+    <logger name="io.cucumber" level="INFO"/>
 </configuration>
 ```
+
+## Debugging Checklist
+
+### Container Issues
+
+- [ ] Check container is running: `container.isRunning()`
+- [ ] Verify mapped ports: `container.getMappedPort(port)`
+- [ ] Review container logs: `container.getLogs()`
+- [ ] Check Docker daemon status
+- [ ] Verify image exists and can be pulled
+
+### WebDriver Issues
+
+- [ ] Check driver initialization logs
+- [ ] Capture screenshot on failure
+- [ ] Log current URL and page title
+- [ ] Check browser console logs
+- [ ] Verify Chrome options (headless, fake media)
+
+### BDD Scenario Issues
+
+- [ ] Review step definition matching
+- [ ] Check ScenarioContext state
+- [ ] Verify @Before/@After hook execution
+- [ ] Log step parameters
+- [ ] Capture debug artifacts on failure
 
 ## Best Practices
 
 ### DO:
-- ✅ Use `@Slf4j` for logging (Lombok)
-- ✅ Log at appropriate levels (error, warn, info, debug)
-- ✅ Include context in log messages
-- ✅ Use structured logging for production
-- ✅ Implement global exception handler
-- ✅ Create specific exception classes
-- ✅ Return consistent error responses
+- Use `@Slf4j` for logging (Lombok)
+- Log at appropriate levels (error, warn, info, debug)
+- Include context in log messages
+- Capture artifacts on test failure
+- Log container and browser state for debugging
 
 ### DON'T:
-- ❌ Use `System.out.println`
-- ❌ Log sensitive data (passwords, tokens)
-- ❌ Catch and swallow exceptions silently
-- ❌ Use generic `Exception` catch blocks
-- ❌ Expose internal error details to clients
+- Use `System.out.println`
+- Log sensitive data (tokens, credentials)
+- Catch and swallow exceptions silently
+- Use generic `Exception` catch blocks
+- Leave debug logging enabled in CI
 
 ## Related Skills
 
-- **backend-dev-guidelines** - Controller and service patterns
-- **skill-developer** - Creating custom skills
+- **livekit-testing-guidelines** - Container and page object patterns
+- **bdd-tester** - Cucumber BDD testing patterns

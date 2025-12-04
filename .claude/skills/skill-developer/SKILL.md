@@ -94,9 +94,9 @@ Defines:
 - Comprehensive documentation
 
 **Examples:**
-- `backend-dev-guidelines` - Node.js/Express/TypeScript patterns
-- `frontend-dev-guidelines` - React/TypeScript best practices
-- `error-tracking` - Sentry integration guidance
+- `livekit-testing-guidelines` - TestContainers/Selenium/Cucumber patterns
+- `bdd-tester` - Cucumber BDD test patterns
+- `error-tracking` - Test debugging and troubleshooting
 
 **When to Use:**
 - Complex systems requiring deep knowledge

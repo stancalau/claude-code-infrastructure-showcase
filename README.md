@@ -1,8 +1,8 @@
 # Claude Code Infrastructure Showcase
 
-**A curated reference library of production-tested Claude Code infrastructure for Spring Boot 3.x development.**
+**A curated reference library of production-tested Claude Code infrastructure for LiveKit Testing Framework development.**
 
-Born from 6 months of real-world use managing complex enterprise Java projects, this showcase provides the patterns and systems that solved the "skills don't activate automatically" problem and scaled Claude Code for Spring Boot development.
+Born from real-world use managing complex testing frameworks, this showcase provides the patterns and systems that solved the "skills don't activate automatically" problem and scaled Claude Code for Java test automation development.
 
 > **This is NOT a working application** - it's a reference library. Copy what you need into your own projects.
 
@@ -15,10 +15,29 @@ Born from 6 months of real-world use managing complex enterprise Java projects, 
 - Modular skill pattern (500-line rule with progressive disclosure)
 - Specialized agents for complex tasks
 - Dev docs system that survives context resets
-- Comprehensive examples using Spring Boot 3.x patterns
+- Comprehensive examples using LiveKit testing patterns
 
-**Time investment to build:** 6 months of iteration
-**Time to integrate into your project:** 15-30 minutes
+**Target Project:** [LiveKit Testing Framework](https://github.com/Stancalau-ro/livekit-testing)
+
+---
+
+## Tech Stack Reference
+
+This showcase is designed for projects using:
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Java** | 21+ | Core language |
+| **Gradle** | Latest | Build tool |
+| **JUnit 5** | 5.x | Unit testing |
+| **Cucumber** | 7.18.0 | BDD testing framework |
+| **Selenium WebDriver** | 4.27.0 | Browser automation |
+| **TestContainers** | 1.20.4 | Docker container orchestration |
+| **LiveKit Server SDK** | 0.8.5 | WebRTC server integration |
+| **MinIO** | S3-compatible | Storage testing |
+| **Redis** | Container | Caching/state |
+| **Lombok** | Latest | Boilerplate reduction |
+| **AWS SDK** | 2.20.68 | S3 client utilities |
 
 ---
 
@@ -44,10 +63,10 @@ Born from 6 months of real-world use managing complex enterprise Java projects, 
 Browse the [skills catalog](.claude/skills/) and copy what you need.
 
 **Available:**
-- **backend-dev-guidelines** - Spring Boot 3.x/Lombok/JPA patterns
+- **livekit-testing-guidelines** - Container orchestration, page objects, state management
 - **skill-developer** - Meta-skill for creating skills
-- **route-tester** - Test REST endpoints with MockMvc/TestContainers
-- **error-tracking** - Logging and exception handling patterns
+- **bdd-tester** - Cucumber/Gherkin BDD testing patterns
+- **error-tracking** - Logging and test debugging patterns
 
 **[Skills Guide: .claude/skills/README.md](.claude/skills/README.md)**
 
@@ -57,7 +76,8 @@ Browse the [skills catalog](.claude/skills/) and copy what you need.
 - Code architecture review
 - Refactoring assistance
 - Documentation generation
-- Error debugging
+- BDD scenario testing
+- Container debugging
 - And more...
 
 **[Agents Guide: .claude/agents/README.md](.claude/agents/README.md)**
@@ -81,11 +101,11 @@ Browse the [skills catalog](.claude/skills/) and copy what you need.
 ### Production-Tested Patterns
 
 These aren't theoretical examples - they're extracted from:
-- Spring Boot 3.x microservices in production
-- Enterprise Java applications with Spring Security
-- JPA/Hibernate data access patterns
-- TestContainers integration testing
-- 6 months of daily Claude Code use
+- LiveKit WebRTC testing in production
+- BDD/Cucumber integration testing
+- TestContainers Docker orchestration
+- Selenium browser automation
+- Real-world test framework development
 
 The patterns work because they solved real problems.
 
@@ -111,9 +131,9 @@ skill-name/
 ```
 .claude/
 ├── skills/                 # 4 production skills
-│   ├── backend-dev-guidelines/  (11 resource files)
+│   ├── livekit-testing-guidelines/  (resource files)
 │   ├── skill-developer/         (7 resource files)
-│   ├── route-tester/
+│   ├── bdd-tester/
 │   ├── error-tracking/
 │   └── skill-rules.json    # Skill activation configuration
 ├── hooks/                  # 2 TypeScript hooks (cross-platform)
@@ -122,8 +142,8 @@ skill-name/
 ├── agents/                 # 9 specialized agents
 │   ├── code-architecture-reviewer.md
 │   ├── refactor-planner.md
-│   ├── auto-error-resolver.md
-│   └── ... 6 more
+│   ├── bdd-scenario-tester.md
+│   └── ... more
 └── commands/               # 3 slash commands
     ├── dev-docs.md
     └── ...
@@ -142,9 +162,9 @@ dev/
 | Skill | Lines | Purpose | Best For |
 |-------|-------|---------|----------|
 | [**skill-developer**](.claude/skills/skill-developer/) | ~400 | Creating and managing skills | Meta-development |
-| [**backend-dev-guidelines**](.claude/skills/backend-dev-guidelines/) | ~500 | Spring Boot/JPA/Lombok patterns | Backend APIs |
-| [**route-tester**](.claude/skills/route-tester/) | ~300 | Testing REST endpoints | API testing |
-| [**error-tracking**](.claude/skills/error-tracking/) | ~250 | Logging and exception handling | Error monitoring |
+| [**livekit-testing-guidelines**](.claude/skills/livekit-testing-guidelines/) | ~500 | TestContainers/Page Objects/State management | Test framework development |
+| [**bdd-tester**](.claude/skills/bdd-tester/) | ~300 | Cucumber/Gherkin BDD patterns | BDD test creation |
+| [**error-tracking**](.claude/skills/error-tracking/) | ~250 | Logging and test debugging | Test troubleshooting |
 
 **All skills follow the modular pattern** - main file + resource files for progressive disclosure.
 
@@ -173,8 +193,8 @@ dev/
 | plan-reviewer | Review development plans |
 | refactor-planner | Create refactoring strategies |
 | web-research-specialist | Research technical issues online |
-| auth-route-tester | Test authenticated endpoints |
-| auth-route-debugger | Debug auth issues |
+| bdd-scenario-tester | Test Cucumber BDD scenarios |
+| container-debugger | Debug TestContainers/Docker issues |
 | auto-error-resolver | Auto-fix Java compilation errors |
 
 **[How agents work](.claude/agents/README.md)**
@@ -185,7 +205,7 @@ dev/
 |---------|---------|
 | /dev-docs | Create structured dev documentation |
 | /dev-docs-update | Update docs before context reset |
-| /route-research-for-testing | Research route patterns for testing |
+| /route-research-for-testing | Research test patterns |
 
 ---
 
@@ -210,7 +230,7 @@ dev/
 - Resource files <500 lines each (deep dives)
 - Claude loads incrementally as needed
 
-**Example:** backend-dev-guidelines has 11 resource files covering controllers, services, repositories, DTOs, JPA patterns, security, testing, and more.
+**Example:** livekit-testing-guidelines has resource files covering containers, page objects, state management, WebRTC automation, and more.
 
 ### Dev Docs Pattern
 
@@ -238,11 +258,11 @@ The included `settings.json` is an **example only**:
 2. Customize or skip Stop hooks
 3. Update MCP server list for your setup
 
-### Blog Domain Examples
-Skills use generic blog examples (Post/Comment/User):
+### Example Patterns
+Skills use generic testing examples:
 - These are **teaching examples**, not requirements
-- Patterns work for any domain (e-commerce, SaaS, etc.)
-- Adapt the patterns to your business logic
+- Patterns work for any domain testing
+- Adapt the patterns to your specific test scenarios
 
 ---
 
@@ -270,6 +290,54 @@ Skills use generic blog examples (Post/Comment/User):
 - Add agents you find useful
 - Add slash commands
 - Customize Stop hooks (advanced)
+
+---
+
+## LiveKit Testing Framework Context
+
+### Project Structure (Target)
+
+```
+src/main/java/ro/stancalau/test/framework/
+├── container/              # Docker container management
+│   ├── LiveKitContainer.java
+│   ├── EgressContainer.java
+│   ├── MinIOContainer.java
+│   └── RedisContainer.java
+├── page/                   # Page Objects for WebRTC
+│   ├── LiveKitMeet.java
+│   ├── WebrtcPublish.java
+│   └── WebrtcPlayback.java
+├── state/                  # State management
+│   ├── ContainerStateManager.java
+│   ├── RoomClientStateManager.java
+│   └── WebDriverStateManager.java
+├── config/                 # Configuration
+│   └── SeleniumConfig.java
+└── util/                   # Utilities
+    ├── StringParsingUtils.java
+    ├── S3ClientUtils.java
+    ├── DateUtils.java
+    └── FileUtils.java
+
+src/test/java/ro/stancalau/test/
+├── framework/              # Unit tests
+└── bdd/                    # BDD step definitions
+    └── steps/
+
+src/test/resources/
+└── features/               # Cucumber feature files
+    └── *.feature
+```
+
+### Key Features
+
+- **Container Orchestration:** Automated LiveKit, Redis, MinIO, and Egress container management
+- **WebRTC Automation:** Real browser testing with video/audio via Selenium
+- **BDD Testing:** Cucumber/Gherkin for readable test scenarios
+- **VNC Recording:** Configurable test recording (skip/failed/all)
+- **Token Management:** Comprehensive LiveKit permission handling (17 permission types)
+- **CI/CD Ready:** Headless execution support
 
 ---
 
