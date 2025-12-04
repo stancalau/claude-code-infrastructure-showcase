@@ -260,6 +260,53 @@
                 ]
             }
         },
+        "ui-design-feedback": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Playwright-based frontend testing for Thymeleaf UIs with visual and functional verification",
+            "promptTriggers": {
+                "keywords": [
+                    "test UI",
+                    "test page",
+                    "visual test",
+                    "screenshot test",
+                    "frontend test",
+                    "browser test",
+                    "playwright",
+                    "design feedback",
+                    "UI feedback",
+                    "verify layout",
+                    "form testing",
+                    "HTMX testing",
+                    "test template",
+                    "check page",
+                    "browser_snapshot",
+                    "browser_screenshot",
+                    "auto-fix UI"
+                ],
+                "intentPatterns": [
+                    "(test|check|verify|validate).*?(UI|page|template|form|layout|design)",
+                    "(visual|screenshot|browser).*?(test|check|verify)",
+                    "(auto|automatically).*?(fix|correct|improve).*?(UI|page|template)",
+                    "(how does|what does).*?(page|template|form).*?look"
+                ]
+            },
+            "fileTriggers": {
+                "pathPatterns": [
+                    "**/templates/**/*.html",
+                    "**/static/css/**/*.css",
+                    "**/static/js/**/*.js"
+                ],
+                "contentPatterns": [
+                    "th:text",
+                    "th:each",
+                    "hx-get",
+                    "hx-post",
+                    "hx-target"
+                ]
+            }
+        },
         "thymeleaf-dev-guidelines": {
             "type": "domain",
             "enforcement": "suggest",
